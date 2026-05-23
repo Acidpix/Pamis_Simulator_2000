@@ -18,14 +18,18 @@ const ANG = {
 
 // ── Composants UI ──
 function Card({ children, style }) {
-  return <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--r2)', padding:12, marginBottom:8, boxShadow:'var(--shadow)', ...style }}>{children}</div>
+  return <div style={{
+    background:'var(--surface)', border:'1px solid var(--border)',
+    borderRadius:'var(--r2)', padding:'14px 14px 10px',
+    marginBottom:10, boxShadow:'var(--shadow)', ...style,
+  }}>{children}</div>
 }
 function Label({ children }) {
-  return <div style={{ fontSize:12, color:'var(--text3)', fontWeight:500, marginBottom:3 }}>{children}</div>
+  return <div style={{ fontSize:11, color:'var(--text3)', fontWeight:600, marginBottom:4, letterSpacing:'.03em' }}>{children}</div>
 }
 function Field({ label, children, half }) {
   return (
-    <div style={{ marginBottom:8, gridColumn:half?'span 1':'span 2' }}>
+    <div style={{ marginBottom:9, gridColumn:half?'span 1':'span 2' }}>
       {label && <Label>{label}</Label>}
       {children}
     </div>
@@ -36,20 +40,26 @@ function NumInput({ value, min, max, step=1, unit, onChange }) {
     <div style={{ display:'flex', alignItems:'center', gap:4 }}>
       <input type="number" value={value} min={min} max={max} step={step}
         onChange={e=>{const v=parseFloat(e.target.value);if(!isNaN(v))onChange(v)}}
-        style={{ flex:1, padding:'5px 7px', borderRadius:'var(--r)', border:'1.5px solid var(--border)', fontSize:13, minWidth:0 }} />
-      {unit && <span style={{ fontSize:11, color:'var(--text3)', minWidth:28, flexShrink:0 }}>{unit}</span>}
+        style={{
+          flex:1, padding:'6px 8px', borderRadius:'var(--r)',
+          border:'1.5px solid var(--border)', fontSize:13, minWidth:0,
+          background:'var(--surface2)', fontWeight:500,
+        }} />
+      {unit && <span style={{ fontSize:11, color:'var(--text3)', minWidth:28, flexShrink:0, fontWeight:600 }}>{unit}</span>}
     </div>
   )
 }
 function Toggle({ value, onChange, label }) {
   return (
-    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6 }}>
-      {label && <span style={{ fontSize:13, color:'var(--text2)' }}>{label}</span>}
+    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
+      {label && <span style={{ fontSize:13, color:'var(--text2)', fontWeight:500 }}>{label}</span>}
       <button onClick={()=>onChange(!value)} style={{
-        width:40, height:22, borderRadius:11, border:'none', cursor:'pointer', flexShrink:0,
-        background:value?'var(--blue)':'var(--border2)', transition:'all .2s', position:'relative',
+        width:42, height:24, borderRadius:12, border:'none', cursor:'pointer', flexShrink:0,
+        background: value ? 'var(--blue)' : 'var(--border2)',
+        transition:'all .2s', position:'relative',
+        boxShadow: value ? '0 2px 6px rgba(109,40,217,.30)' : 'none',
       }}>
-        <span style={{ position:'absolute', top:3, left:value?20:3, width:16, height:16, borderRadius:'50%', background:'#fff', transition:'all .2s' }} />
+        <span style={{ position:'absolute', top:3, left:value?21:3, width:18, height:18, borderRadius:'50%', background:'#fff', transition:'all .2s', boxShadow:'0 1px 3px rgba(0,0,0,.2)' }} />
       </button>
     </div>
   )
@@ -57,7 +67,7 @@ function Toggle({ value, onChange, label }) {
 function ColorSwatch({ value, onChange }) {
   return (
     <input type="color" value={value} onChange={e=>onChange(e.target.value)}
-      style={{ width:32, height:28, borderRadius:'var(--r)', border:'1.5px solid var(--border)', padding:2, cursor:'pointer', background:'none', flexShrink:0 }} />
+      style={{ width:34, height:30, borderRadius:'var(--r)', border:'2px solid var(--border)', padding:2, cursor:'pointer', background:'none', flexShrink:0 }} />
   )
 }
 function Slider({ value, min=0, max=1, step=0.05, onChange }) {
@@ -71,10 +81,11 @@ function ShapeToggle({ value, options, onChange }) {
     <div style={{ display:'flex', gap:4 }}>
       {options.map(o=>(
         <button key={o.v} onClick={()=>onChange(o.v)} style={{
-          flex:1, padding:'5px 0', borderRadius:'var(--r)', fontSize:12, fontWeight:500, cursor:'pointer',
+          flex:1, padding:'6px 4px', borderRadius:'var(--r)', fontSize:12, fontWeight:600, cursor:'pointer',
           border:`1.5px solid ${value===o.v?'var(--blue)':'var(--border)'}`,
-          background:value===o.v?'var(--blue-dim)':'var(--surface2)',
-          color:value===o.v?'var(--blue)':'var(--text2)',
+          background: value===o.v ? 'var(--blue-dim)' : 'var(--surface2)',
+          color: value===o.v ? 'var(--blue)' : 'var(--text2)',
+          transition:'all .12s',
         }}>{o.label}</button>
       ))}
     </div>
@@ -83,12 +94,13 @@ function ShapeToggle({ value, options, onChange }) {
 function FlatBtn({ onClick, children, danger, full, style:sx }) {
   return (
     <button onClick={onClick} style={{
-      width:full?'100%':undefined, padding:'7px 10px',
+      width:full?'100%':undefined, padding:'8px 12px',
       border:`1.5px solid ${danger?'#fca5a5':'var(--border)'}`,
       borderRadius:'var(--r)', background:danger?'var(--red-dim)':'var(--surface2)',
       color:danger?'var(--red)':'var(--text2)',
-      fontSize:13, fontWeight:500, cursor:'pointer',
-      display:'flex', alignItems:'center', justifyContent:'center', gap:5, ...sx,
+      fontSize:13, fontWeight:600, cursor:'pointer',
+      display:'flex', alignItems:'center', justifyContent:'center', gap:5,
+      transition:'all .12s', ...sx,
     }}>{children}</button>
   )
 }
@@ -97,10 +109,14 @@ function FlatBtn({ onClick, children, danger, full, style:sx }) {
 function SubSec({ title, children, defaultOpen=true }) {
   const [open, setOpen] = useState(defaultOpen)
   return (
-    <div style={{ marginBottom:8 }}>
-      <div onClick={()=>setOpen(o=>!o)} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', cursor:'pointer', padding:'5px 0', borderBottom:'1px solid var(--border)', marginBottom: open ? 8 : 0 }}>
-        <span style={{ fontSize:11, fontWeight:700, color:'var(--text3)', textTransform:'uppercase', letterSpacing:'.06em' }}>{title}</span>
-        <span style={{ fontSize:11, color:'var(--text3)' }}>{open?'▾':'▸'}</span>
+    <div style={{ marginBottom:10 }}>
+      <div onClick={()=>setOpen(o=>!o)} style={{
+        display:'flex', justifyContent:'space-between', alignItems:'center',
+        cursor:'pointer', padding:'6px 0', marginBottom: open ? 8 : 0,
+        borderBottom:`1.5px solid var(--border)`,
+      }}>
+        <span style={{ fontSize:11, fontWeight:700, color:'var(--blue)', textTransform:'uppercase', letterSpacing:'.08em' }}>{title}</span>
+        <span style={{ fontSize:10, color:'var(--text3)', fontWeight:700 }}>{open?'▾':'▸'}</span>
       </div>
       {open && children}
     </div>
@@ -108,33 +124,56 @@ function SubSec({ title, children, defaultOpen=true }) {
 }
 
 // ── Section dépliable ──
-function Sec({ title, children, defaultOpen=true, badge }) {
+function Sec({ title, children, defaultOpen=true, badge, accent }) {
   const [open, setOpen] = useState(defaultOpen)
+  const color = accent || 'var(--blue)'
   return (
-    <Card>
-      <div onClick={()=>setOpen(o=>!o)} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', cursor:'pointer', marginBottom:open?10:0 }}>
-        <div style={{ fontSize:11, fontWeight:700, color:'var(--text3)', textTransform:'uppercase', letterSpacing:'.07em', display:'flex', alignItems:'center', gap:6 }}>
+    <div style={{
+      background:'var(--surface)', border:'1px solid var(--border)',
+      borderRadius:'var(--r2)', marginBottom:10,
+      boxShadow:'var(--shadow)', overflow:'hidden',
+    }}>
+      {/* Header coloré */}
+      <div onClick={()=>setOpen(o=>!o)} style={{
+        display:'flex', justifyContent:'space-between', alignItems:'center',
+        cursor:'pointer', padding:'10px 14px',
+        borderBottom: open ? '1px solid var(--border)' : 'none',
+        background:`linear-gradient(90deg, ${color}18 0%, transparent 100%)`,
+        borderLeft:`3px solid ${color}`,
+      }}>
+        <div style={{ fontSize:12, fontWeight:700, color, display:'flex', alignItems:'center', gap:7 }}>
           {title}
-          {badge && <span style={{ fontSize:10, background:'var(--blue)', color:'#fff', borderRadius:10, padding:'1px 6px' }}>{badge}</span>}
+          {badge !== undefined && (
+            <span style={{ fontSize:10, background:color, color:'#fff', borderRadius:99, padding:'1px 7px', fontWeight:700 }}>{badge}</span>
+          )}
         </div>
-        <span style={{ fontSize:12, color:'var(--text3)' }}>{open?'▾':'▸'}</span>
+        <span style={{ fontSize:11, color:'var(--text3)', fontWeight:700 }}>{open?'▾':'▸'}</span>
       </div>
-      {open && children}
-    </Card>
+      {open && <div style={{ padding:'12px 14px 10px' }}>{children}</div>}
+    </div>
   )
 }
 
 function RobotRow({ robot, selected, onSelect, onRemove }) {
   return (
     <div onClick={onSelect} style={{
-      display:'flex', alignItems:'center', gap:7, padding:'7px 6px',
-      borderRadius:'var(--r)', cursor:'pointer', marginBottom:2,
-      background:selected?'var(--blue-dim)':'transparent',
-      border:`1.5px solid ${selected?'var(--blue-mid)':'transparent'}`,
+      display:'flex', alignItems:'center', gap:8, padding:'8px 10px',
+      borderRadius:'var(--r)', cursor:'pointer', marginBottom:3,
+      background: selected ? 'var(--blue-dim)' : 'var(--surface2)',
+      border: `1.5px solid ${selected ? 'var(--blue-mid)' : 'transparent'}`,
+      transition:'all .12s',
     }}>
-      <span style={{ width:10, height:10, borderRadius:'50%', background:robot.color, display:'inline-block', flexShrink:0 }} />
-      <span style={{ flex:1, fontWeight:500, fontSize:13, color:selected?'var(--blue)':'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{robot.name}</span>
-      <span style={{ fontSize:11, color:'var(--text3)', flexShrink:0 }}>{robot.waypoints.length}pt</span>
+      <span style={{
+        width:12, height:12, borderRadius:'50%', background:robot.color,
+        display:'inline-block', flexShrink:0,
+        boxShadow:`0 0 0 2px ${robot.color}44`,
+      }} />
+      <span style={{ flex:1, fontWeight:600, fontSize:13, color:selected?'var(--blue)':'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{robot.name}</span>
+      <span style={{
+        fontSize:10, color: selected ? 'var(--blue)' : 'var(--text3)',
+        background: selected ? 'var(--blue-mid)' : 'var(--border)',
+        borderRadius:99, padding:'1px 6px', fontWeight:700, flexShrink:0,
+      }}>{robot.waypoints.length}pt</span>
       <button onClick={e=>{e.stopPropagation();onRemove()}}
         style={{ width:20, height:20, borderRadius:4, border:'none', background:'transparent', color:'var(--text3)', fontSize:15, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>×</button>
     </div>
@@ -143,13 +182,18 @@ function RobotRow({ robot, selected, onSelect, onRemove }) {
 function ObsRow({ obs, selected, onSelect, onRemove }) {
   return (
     <div onClick={onSelect} style={{
-      display:'flex', alignItems:'center', gap:7, padding:'7px 6px',
-      borderRadius:'var(--r)', cursor:'pointer', marginBottom:2,
-      background:selected?'#fffbeb':'transparent',
-      border:`1.5px solid ${selected?'#fcd34d':'transparent'}`,
+      display:'flex', alignItems:'center', gap:8, padding:'8px 10px',
+      borderRadius:'var(--r)', cursor:'pointer', marginBottom:3,
+      background: selected ? '#fefce8' : 'var(--surface2)',
+      border: `1.5px solid ${selected ? '#fcd34d' : 'transparent'}`,
+      transition:'all .12s',
     }}>
-      <span style={{ width:10, height:10, borderRadius:obs.shape==='circle'?'50%':'2px', background:obs.color, display:'inline-block', flexShrink:0 }} />
-      <span style={{ flex:1, fontWeight:500, fontSize:13, color:'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{obs.name}</span>
+      <span style={{
+        width:12, height:12, borderRadius:obs.shape==='circle'?'50%':'3px',
+        background:obs.color, display:'inline-block', flexShrink:0,
+        boxShadow:`0 0 0 2px ${obs.color}44`,
+      }} />
+      <span style={{ flex:1, fontWeight:600, fontSize:13, color:'var(--text)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{obs.name}</span>
       <button onClick={e=>{e.stopPropagation();onRemove()}}
         style={{ width:20, height:20, borderRadius:4, border:'none', background:'transparent', color:'var(--text3)', fontSize:15, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>×</button>
     </div>
@@ -225,7 +269,7 @@ export default function LeftPanel() {
 
   return (
     <div style={{ display:'flex', flexShrink:0, height:'100%' }}>
-      <div style={{ width:panelW, height:'100%', overflowY:'auto', overflowX:'hidden', padding:10, borderRight:'1px solid var(--border)', background:'var(--bg)' }}>
+      <div style={{ width:panelW, height:'100%', overflowY:'auto', overflowX:'hidden', padding:'10px 10px', borderRight:'1px solid var(--border)', background:'var(--bg)' }}>
 
         {/* ── Robots ── */}
         <Sec title={t.robots} badge={robots.length||undefined}>
@@ -235,9 +279,10 @@ export default function LeftPanel() {
               onSelect={()=>selectRobot(r.id)} onRemove={()=>{pushHistory({robots,obstacles});removeRobot(r.id)}} />
           ))}
           <button onClick={()=>addRobot()} style={{
-            width:'100%', marginTop:6, padding:8, borderRadius:'var(--r)',
-            border:'1.5px dashed var(--border2)', background:'transparent',
-            color:'var(--blue)', fontSize:13, fontWeight:600, cursor:'pointer',
+            width:'100%', marginTop:6, padding:9, borderRadius:'var(--r)',
+            border:'1.5px dashed var(--blue-mid)', background:'var(--blue-dim)',
+            color:'var(--blue)', fontSize:13, fontWeight:700, cursor:'pointer',
+            transition:'all .12s',
           }}>{t.addRobot}</button>
         </Sec>
 
@@ -377,8 +422,8 @@ export default function LeftPanel() {
               onSelect={()=>selectObstacle(o.id)} onRemove={()=>removeObstacle(o.id)} />
           ))}
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6, marginTop:6 }}>
-            <button onClick={()=>addObstacle({shape:'rect',collisionShape:'rect'})} style={{ padding:7, borderRadius:'var(--r)', border:'1.5px dashed var(--border2)', background:'transparent', color:'var(--text2)', fontSize:12, fontWeight:500, cursor:'pointer' }}>{t.addRect}</button>
-            <button onClick={()=>addObstacle({shape:'circle',collisionShape:'circle'})} style={{ padding:7, borderRadius:'var(--r)', border:'1.5px dashed var(--border2)', background:'transparent', color:'var(--text2)', fontSize:12, fontWeight:500, cursor:'pointer' }}>{t.addCircle}</button>
+            <button onClick={()=>addObstacle({shape:'rect',collisionShape:'rect'})} style={{ padding:8, borderRadius:'var(--r)', border:'1.5px dashed var(--border2)', background:'var(--surface2)', color:'var(--text2)', fontSize:12, fontWeight:600, cursor:'pointer', transition:'all .12s' }}>{t.addRect}</button>
+            <button onClick={()=>addObstacle({shape:'circle',collisionShape:'circle'})} style={{ padding:8, borderRadius:'var(--r)', border:'1.5px dashed var(--border2)', background:'var(--surface2)', color:'var(--text2)', fontSize:12, fontWeight:600, cursor:'pointer', transition:'all .12s' }}>{t.addCircle}</button>
           </div>
         </Sec>
 
@@ -465,7 +510,7 @@ export default function LeftPanel() {
 
       {/* Poignée de redimensionnement */}
       <div onMouseDown={onResizeStart}
-        style={{ width:5, cursor:'col-resize', background:'var(--border)', flexShrink:0, transition:'background .15s' }}
+        style={{ width:4, cursor:'col-resize', background:'var(--border)', flexShrink:0, transition:'background .15s' }}
         onMouseEnter={e=>e.currentTarget.style.background='var(--blue)'}
         onMouseLeave={e=>e.currentTarget.style.background='var(--border)'} />
     </div>

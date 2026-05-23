@@ -93,27 +93,42 @@ function PauseInput({ value, onChange }) {
 }
 
 function Card({ children, style }) {
-  return <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--r2)', marginBottom:10, overflow:'hidden', boxShadow:'var(--shadow)', ...style }}>{children}</div>
+  return <div style={{
+    background:'var(--surface)', border:'1px solid var(--border)',
+    borderRadius:'var(--r2)', marginBottom:10, overflow:'hidden',
+    boxShadow:'var(--shadow)', ...style,
+  }}>{children}</div>
 }
-function CardHead({ children, color }) {
-  return <div style={{ padding:'10px 14px', borderBottom:'1px solid var(--border)', fontSize:12, fontWeight:700, textTransform:'uppercase', letterSpacing:'.06em', color:color||'var(--text3)' }}>{children}</div>
+function CardHead({ children, color, accent }) {
+  const c = accent || color || 'var(--blue)'
+  return (
+    <div style={{
+      padding:'10px 14px', borderBottom:'1px solid var(--border)',
+      fontSize:12, fontWeight:700, letterSpacing:'.05em', color:c,
+      background:`linear-gradient(90deg, ${c}15 0%, transparent 100%)`,
+      borderLeft:`3px solid ${c}`,
+    }}>{children}</div>
+  )
 }
 function Stat({ label, value, color }) {
   return (
-    <div style={{ textAlign:'center', padding:'9px 4px' }}>
-      <div style={{ fontSize:11, color:'var(--text3)', marginBottom:2 }}>{label}</div>
-      <div style={{ fontSize:16, fontWeight:700, color:color||'var(--text)', fontVariantNumeric:'tabular-nums' }}>{value}</div>
+    <div style={{ textAlign:'center', padding:'10px 4px' }}>
+      <div style={{ fontSize:10, color:'var(--text3)', marginBottom:3, fontWeight:600, textTransform:'uppercase', letterSpacing:'.06em' }}>{label}</div>
+      <div style={{ fontSize:15, fontWeight:700, color:color||'var(--text)', fontVariantNumeric:'tabular-nums' }}>{value}</div>
     </div>
   )
 }
 function SegRow({ seg, idx, color, t }) {
   return (
     <div style={{ padding:'10px 14px', borderBottom:'1px solid var(--border)' }}>
-      <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:6 }}>
-        <span style={{ fontSize:11, fontWeight:700, padding:'2px 8px', borderRadius:4, background:color+'22', color }}>#{idx+1}</span>
-        <span style={{ fontSize:12, color:'var(--text3)' }}>{t.segStartAt} {seg.startTime}s</span>
+      <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:7 }}>
+        <span style={{
+          fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:99,
+          background:color+'22', color, letterSpacing:'.04em',
+        }}>#{idx+1}</span>
+        <span style={{ fontSize:11, color:'var(--text3)' }}>{t.segStartAt} {seg.startTime}s</span>
         {seg.pause > 0 && (
-          <span style={{ fontSize:11, padding:'1px 6px', borderRadius:4, background:'#fef3c7', color:'#d97706', fontWeight:600 }}>
+          <span style={{ fontSize:10, padding:'2px 7px', borderRadius:99, background:'#fef3c7', color:'#d97706', fontWeight:700 }}>
             ⏱ +{seg.pause}s
           </span>
         )}
@@ -126,13 +141,13 @@ function SegRow({ seg, idx, color, t }) {
           { l:t.segTurn,     v:seg.relAngle!==null?(seg.relAngle>0?'+':'')+seg.relAngle+'°':'—' },
           ...(seg.rotDuration>0 ? [{ l:t.segRotation, v:seg.rotDuration+' s' }] : []),
         ].map(({l,v})=>(
-          <div key={l}>
-            <div style={{ fontSize:11, color:'var(--text3)' }}>{l}</div>
-            <div style={{ fontSize:14, fontWeight:600, color:'var(--text)' }}>{v}</div>
+          <div key={l} style={{ background:'var(--surface2)', borderRadius:'var(--r)', padding:'5px 8px' }}>
+            <div style={{ fontSize:10, color:'var(--text3)', fontWeight:600, textTransform:'uppercase', letterSpacing:'.04em', marginBottom:2 }}>{l}</div>
+            <div style={{ fontSize:13, fontWeight:700, color:'var(--text)' }}>{v}</div>
           </div>
         ))}
       </div>
-      <div style={{ marginTop:5, fontSize:11, color:'var(--text3)' }}>
+      <div style={{ marginTop:6, fontSize:11, color:'var(--text3)', fontVariantNumeric:'tabular-nums' }}>
         ({Math.round(seg.from.x*1000)}, {Math.round(seg.from.y*1000)}) → ({Math.round(seg.to.x*1000)}, {Math.round(seg.to.y*1000)}) mm
       </div>
     </div>
@@ -146,32 +161,40 @@ function RobotTrajectory({ robot, defaultOpen, onPauseChange, t }) {
   const totalTime = segments.reduce((a,s)=>a+s.duration+s.rotDuration, 0) + (robot.startDelay ?? 0)
 
   return (
-    <Card>
+    <div style={{
+      background:'var(--surface)', border:'1px solid var(--border)',
+      borderRadius:'var(--r2)', marginBottom:10, overflow:'hidden', boxShadow:'var(--shadow)',
+    }}>
       <div onClick={() => setOpen(o => !o)}
-        style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 14px', cursor:'pointer', borderBottom: open ? '1px solid var(--border)' : 'none' }}>
-        <span style={{ color:robot.color, fontSize:14 }}>●</span>
-        <span style={{ flex:1, fontSize:13, fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{robot.name}</span>
-        <span style={{ fontSize:12, color:'var(--text3)' }}>{totalDistMm}mm</span>
-        <span style={{ fontSize:12, color:'var(--text3)' }}>{totalTime.toFixed(1)}s</span>
-        <span style={{ fontSize:12, color:'var(--text3)' }}>{open ? '▲' : '▼'}</span>
+        style={{
+          display:'flex', alignItems:'center', gap:8, padding:'11px 14px', cursor:'pointer',
+          borderBottom: open ? '1px solid var(--border)' : 'none',
+          background:`linear-gradient(90deg, ${robot.color}15 0%, transparent 60%)`,
+          borderLeft:`3px solid ${robot.color}`,
+        }}>
+        <span style={{ width:10, height:10, borderRadius:'50%', background:robot.color, flexShrink:0, boxShadow:`0 0 0 2px ${robot.color}44` }} />
+        <span style={{ flex:1, fontSize:13, fontWeight:700, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{robot.name}</span>
+        <span style={{ fontSize:11, color:'var(--text3)', background:'var(--surface2)', padding:'2px 6px', borderRadius:99, fontVariantNumeric:'tabular-nums' }}>{totalDistMm}mm</span>
+        <span style={{ fontSize:11, color:'var(--text3)', background:'var(--surface2)', padding:'2px 6px', borderRadius:99 }}>{totalTime.toFixed(1)}s</span>
+        <span style={{ fontSize:10, color:'var(--text3)', fontWeight:700 }}>{open ? '▾' : '▸'}</span>
       </div>
 
       {open && (
         <>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', borderBottom:'1px solid var(--border)' }}>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', borderBottom:'1px solid var(--border)', background:'var(--surface2)' }}>
             <Stat label={t.segDistance} value={totalDistMm>0?totalDistMm+' mm':'—'} color="var(--blue)" />
             <Stat label={t.segMotion}   value={totalTime>0?totalTime.toFixed(1)+' s':'—'} />
-            <Stat label="Pts"           value={segments.length} />
+            <Stat label="Pts"           value={segments.length} color="var(--blue)" />
           </div>
           {segments.length === 0 ? (
-            <div style={{ padding:12, textAlign:'center', color:'var(--text3)', fontSize:13 }}>
+            <div style={{ padding:14, textAlign:'center', color:'var(--text3)', fontSize:13 }}>
               {t.noWaypoints}
             </div>
           ) : segments.map((seg,i) => (
             <div key={i}>
               <SegRow seg={seg} idx={i} color={robot.color} t={t} />
               {onPauseChange && (
-                <div style={{ padding:'4px 14px 10px', borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', gap:8 }}>
+                <div style={{ padding:'5px 14px 10px', borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', gap:8 }}>
                   <span style={{ fontSize:11, color:'var(--text3)', flex:1 }}>{t.pauseOnArrival}</span>
                   <PauseInput value={robot.waypoints[i]?.pause ?? 0} onChange={v=>onPauseChange(i, v)} />
                 </div>
@@ -180,7 +203,7 @@ function RobotTrajectory({ robot, defaultOpen, onPauseChange, t }) {
           ))}
         </>
       )}
-    </Card>
+    </div>
   )
 }
 
@@ -225,19 +248,19 @@ export default function RightPanel() {
   }
 
   return (
-    <div style={{ width:256, height:'100%', overflowY:'auto', flexShrink:0, padding:12, borderLeft:'1px solid var(--border)', background:'var(--bg)' }}>
+    <div style={{ width:264, height:'100%', overflowY:'auto', flexShrink:0, padding:'10px 10px', borderLeft:'1px solid var(--border)', background:'var(--bg)' }}>
 
       {/* Collisions robot-robot */}
       {collisions.length>0 && (
         <Card style={{ borderColor:'#fca5a5' }}>
-          <CardHead color="var(--red)">{t.collRobotLabel(collisions.length)}</CardHead>
+          <CardHead accent="var(--red)">{t.collRobotLabel(collisions.length)}</CardHead>
           <div style={{ padding:10 }}>
             {collisions.map((c,i)=>{
               const a=robots.find(r=>r.id===c.aId), b=robots.find(r=>r.id===c.bId)
               return (
-                <div key={i} style={{ fontSize:13, marginBottom:6, padding:'6px 8px', background:'var(--red-dim)', borderRadius:6 }}>
+                <div key={i} style={{ fontSize:13, marginBottom:6, padding:'7px 10px', background:'var(--red-dim)', borderRadius:'var(--r)', border:'1px solid #fecaca' }}>
                   <span style={{ color:a?.color, fontWeight:700 }}>{a?.name}</span>{' ↔ '}<span style={{ color:b?.color, fontWeight:700 }}>{b?.name}</span>
-                  <div style={{ fontSize:12, color:'var(--text3)', marginTop:2 }}>t={c.t}s · ({Math.round(c.x*1000)}, {Math.round(c.y*1000)}) mm</div>
+                  <div style={{ fontSize:11, color:'var(--text3)', marginTop:3, fontVariantNumeric:'tabular-nums' }}>t={c.t}s · ({Math.round(c.x*1000)}, {Math.round(c.y*1000)}) mm</div>
                 </div>
               )
             })}
@@ -248,14 +271,14 @@ export default function RightPanel() {
       {/* Collisions robot-obstacle */}
       {obsCollisions.length>0 && (
         <Card style={{ borderColor:'#fcd34d' }}>
-          <CardHead color="var(--orange)">{t.collObsLabel(obsCollisions.length)}</CardHead>
+          <CardHead accent="var(--orange)">{t.collObsLabel(obsCollisions.length)}</CardHead>
           <div style={{ padding:10 }}>
             {obsCollisions.map((c,i)=>{
               const r=robots.find(r=>r.id===c.robotId), o=obstacles.find(o=>o.id===c.obsId)
               return (
-                <div key={i} style={{ fontSize:13, marginBottom:6, padding:'6px 8px', background:'#fffbeb', borderRadius:6 }}>
+                <div key={i} style={{ fontSize:13, marginBottom:6, padding:'7px 10px', background:'#fffbeb', borderRadius:'var(--r)', border:'1px solid #fde68a' }}>
                   <span style={{ color:r?.color, fontWeight:700 }}>{r?.name}</span>{' ↔ '}<span style={{ fontWeight:700 }}>{o?.name}</span>
-                  <div style={{ fontSize:12, color:'var(--text3)', marginTop:2 }}>t={c.t}s · ({Math.round(c.x*1000)}, {Math.round(c.y*1000)}) mm</div>
+                  <div style={{ fontSize:11, color:'var(--text3)', marginTop:3, fontVariantNumeric:'tabular-nums' }}>t={c.t}s · ({Math.round(c.x*1000)}, {Math.round(c.y*1000)}) mm</div>
                 </div>
               )
             })}
@@ -265,15 +288,15 @@ export default function RightPanel() {
 
       {/* Collisions bord de table */}
       {borderCollisions.length>0 && (
-        <Card style={{ borderColor:'#c4b5fd' }}>
-          <CardHead color="#7c3aed">{t.collBorderLabel(borderCollisions.length)}</CardHead>
+        <Card style={{ borderColor:'var(--blue-mid)' }}>
+          <CardHead accent="var(--blue)">{t.collBorderLabel(borderCollisions.length)}</CardHead>
           <div style={{ padding:10 }}>
             {borderCollisions.map((c,i)=>{
               const r=robots.find(r=>r.id===c.robotId)
               return (
-                <div key={i} style={{ fontSize:13, marginBottom:6, padding:'6px 8px', background:'#ede9fe', borderRadius:6 }}>
+                <div key={i} style={{ fontSize:13, marginBottom:6, padding:'7px 10px', background:'var(--blue-dim)', borderRadius:'var(--r)', border:'1px solid var(--blue-mid)' }}>
                   <span style={{ color:r?.color, fontWeight:700 }}>{r?.name}</span>{' ↔ '}{t.borderObs}
-                  <div style={{ fontSize:12, color:'var(--text3)', marginTop:2 }}>t={c.t}s · ({Math.round(c.x*1000)}, {Math.round(c.y*1000)}) mm</div>
+                  <div style={{ fontSize:11, color:'var(--text3)', marginTop:3, fontVariantNumeric:'tabular-nums' }}>t={c.t}s · ({Math.round(c.x*1000)}, {Math.round(c.y*1000)}) mm</div>
                 </div>
               )
             })}
@@ -282,12 +305,17 @@ export default function RightPanel() {
       )}
 
       {allCols.length===0 && robots.length>0 && (
-        <div style={{ marginBottom:10, padding:'9px 12px', borderRadius:'var(--r2)', background:'var(--green-dim)', border:'1px solid #bbf7d0', fontSize:13, color:'var(--green)', fontWeight:500 }}>
+        <div style={{
+          marginBottom:10, padding:'10px 14px', borderRadius:'var(--r2)',
+          background:'var(--green-dim)', border:'1px solid #bbf7d0',
+          fontSize:13, color:'var(--green)', fontWeight:600,
+          borderLeft:'3px solid var(--green)',
+        }}>
           {t.noCollision}
         </div>
       )}
 
-      {/* Trajectoires par robot — toutes collapsibles */}
+      {/* Trajectoires par robot */}
       {robots.map((r) => (
         <RobotTrajectory key={r.id} robot={r} t={t}
           defaultOpen={r.id === selectedRobotId || robots.length === 1}
@@ -295,29 +323,34 @@ export default function RightPanel() {
       ))}
 
       {robots.length>0 && (
-        <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+        <div style={{ display:'flex', flexDirection:'column', gap:7 }}>
           <button onClick={handleExport} style={{
-            width:'100%', padding:11, borderRadius:'var(--r2)',
-            border:'1.5px solid var(--border2)', background:'var(--surface)',
-            color:'var(--text)', fontSize:14, fontWeight:600, cursor:'pointer',
-            boxShadow:'var(--shadow)',
+            width:'100%', padding:'10px 14px', borderRadius:'var(--r2)',
+            border:'1.5px solid var(--border)', background:'var(--surface)',
+            color:'var(--text2)', fontSize:13, fontWeight:600, cursor:'pointer',
+            boxShadow:'var(--shadow)', textAlign:'left',
+            transition:'all .12s',
           }}>{t.exportJson}</button>
           <button onClick={handleExportGazebo} style={{
-            width:'100%', padding:11, borderRadius:'var(--r2)',
-            border:'1.5px solid var(--border2)', background:'var(--surface)',
-            color:'var(--text)', fontSize:14, fontWeight:600, cursor:'pointer',
-            boxShadow:'var(--shadow)',
+            width:'100%', padding:'10px 14px', borderRadius:'var(--r2)',
+            border:'1.5px solid var(--blue-mid)', background:'var(--blue-dim)',
+            color:'var(--blue)', fontSize:13, fontWeight:700, cursor:'pointer',
+            boxShadow:'0 2px 8px rgba(109,40,217,.15)', textAlign:'left',
+            transition:'all .12s',
           }}>{t.exportGazebo}</button>
         </div>
       )}
 
       {robots.length===0 && (
-        <Card>
+        <div style={{
+          background:'var(--surface)', border:'1px solid var(--border)',
+          borderRadius:'var(--r2)', overflow:'hidden', boxShadow:'var(--shadow)',
+        }}>
           <CardHead>{t.howToUse}</CardHead>
-          <div style={{ padding:12, fontSize:13, color:'var(--text2)', lineHeight:2 }}>
+          <div style={{ padding:'12px 14px', fontSize:13, color:'var(--text2)', lineHeight:2.1 }}>
             {t.howTo.map((s,i) => <div key={i}>{s}</div>)}
           </div>
-        </Card>
+        </div>
       )}
     </div>
   )
