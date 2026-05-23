@@ -193,11 +193,13 @@ export function detectBorderCollisions(robots, tableW, tableH, maxTime, step=0.0
     let col=false
     for (let t=0; t<=maxTime; t+=step) {
       const p=getRobotPose(robot,t)
-      const r = robot.radius
-      const hit = p.x-r<0 || p.x+r>tableW || p.y-r<0 || p.y+r>tableH
+      const isRect = (robot.collisionShape??'circle')==='rect'
+      const hw = isRect ? robot.width/2  : robot.radius
+      const hh = isRect ? robot.height/2 : robot.radius
+      const hit = p.x-hw<0 || p.x+hw>tableW || p.y-hh<0 || p.y+hh>tableH
       if (hit && !col) {
-        const cx = Math.max(r, Math.min(tableW-r, p.x))
-        const cy = Math.max(r, Math.min(tableH-r, p.y))
+        const cx = Math.max(hw, Math.min(tableW-hw, p.x))
+        const cy = Math.max(hh, Math.min(tableH-hh, p.y))
         events.push({robotId:robot.id,obsId:'border',t:Math.round(t*100)/100,x:cx,y:cy})
         col=true
       }

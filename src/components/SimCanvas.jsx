@@ -68,12 +68,12 @@ function Table({ w, h, bgImage, showGrid, gridColor, gridMinorStep, gridMajorSte
         </Html>
       ))}
 
-      {/* Bordures 70mm */}
+      {/* Bordures 15mm */}
       {[
-        { pos:[0,-h/2-0.035,0.035], rot:[0,0,0], args:[w+0.14,0.07,0.07] },
-        { pos:[0, h/2+0.035,0.035], rot:[0,0,0], args:[w+0.14,0.07,0.07] },
-        { pos:[-w/2-0.035,0,0.035], rot:[0,0,0], args:[0.07,h,0.07] },
-        { pos:[ w/2+0.035,0,0.035], rot:[0,0,0], args:[0.07,h,0.07] },
+        { pos:[0,-h/2-0.0075,0.0075], args:[w+0.03,0.015,0.015] },
+        { pos:[0, h/2+0.0075,0.0075], args:[w+0.03,0.015,0.015] },
+        { pos:[-w/2-0.0075,0,0.0075], args:[0.015,h,0.015] },
+        { pos:[ w/2+0.0075,0,0.0075], args:[0.015,h,0.015] },
       ].map((wall,i) => (
         <mesh key={`wall${i}`} position={wall.pos} castShadow receiveShadow>
           <boxGeometry args={wall.args} />
@@ -162,7 +162,7 @@ function RobotMesh({ robot, selected, simTime, onPointerDown, is3d }) {
   const pose = getRobotPose(robot, simTime)
   const stlGeo = useStlGeo(robot.id, robot.hasStl, robot.width)
   const robotH = is3d ? Math.max(robot.width,robot.height)*0.6 : 0.04
-  const opacity = (robot.opacity??1) * (pose.done ? 0.35 : 1)
+  const opacity = robot.opacity ?? 1
 
   // Collision shape visualisation
   const collShape = robot.collisionShape ?? 'circle'
@@ -395,14 +395,14 @@ function Scene(props) {
       ))}
 
       {robots.map(r => (
-        <TrajectoryLine key={`t_${r.id}`} robot={r} selected={r.id===selectedRobotId} simTime={simTime}
-          onWaypointClick={idx=>{ if(mode==='draw'){pushHistory({robots,obstacles});removeWaypoint(r.id,idx)} }}
-          onWaypointDown={idx=>{ if(mode==='move'){pushHistory({robots,obstacles});dragTarget.current={type:'wp',id:r.id,idx}} }} />
+        <RobotMesh key={r.id} robot={r} selected={r.id===selectedRobotId} simTime={simTime} is3d={is3d}
+          onPointerDown={e=>{e.stopPropagation();selectRobot(r.id);if(mode==='move')dragTarget.current={type:'robot',id:r.id}}} />
       ))}
 
       {robots.map(r => (
-        <RobotMesh key={r.id} robot={r} selected={r.id===selectedRobotId} simTime={simTime} is3d={is3d}
-          onPointerDown={e=>{e.stopPropagation();selectRobot(r.id);if(mode==='move')dragTarget.current={type:'robot',id:r.id}}} />
+        <TrajectoryLine key={`t_${r.id}`} robot={r} selected={r.id===selectedRobotId} simTime={simTime}
+          onWaypointClick={idx=>{ if(mode==='draw'){pushHistory({robots,obstacles});removeWaypoint(r.id,idx)} }}
+          onWaypointDown={idx=>{ if(mode==='move'){pushHistory({robots,obstacles});dragTarget.current={type:'wp',id:r.id,idx}} }} />
       ))}
 
       {collisions.map((c,i)    => <CollisionMarker key={`rr${i}`} cx={c.x} cy={c.y} color="#dc2626" />)}

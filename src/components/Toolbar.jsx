@@ -150,8 +150,8 @@ export default function Toolbar() {
       padding:'8px 14px', background:'var(--surface)',
       borderBottom:'1px solid var(--border)', flexShrink:0,
     }}>
-      <span style={{ fontSize:15, fontWeight:800, color:'var(--blue)', letterSpacing:'-.3px', marginRight:4 }}>
-        PAMIS 2000
+      <span style={{ fontSize:13, fontWeight:800, color:'var(--blue)', letterSpacing:'-.3px', marginRight:4, whiteSpace:'nowrap' }}>
+        TURBO PAMIS SIMULATOR 2000
       </span>
       <Sep />
 
@@ -170,10 +170,10 @@ export default function Toolbar() {
         <span style={{ fontSize:13, fontWeight:700, color:'var(--blue)', minWidth:40, fontVariantNumeric:'tabular-nums' }}>
           {simTime.toFixed(1)}s
         </span>
-        <div style={{ flex:1, height:7, background:'var(--border)', borderRadius:4, cursor:'pointer', minWidth:60, position:'relative' }}
-          onClick={e => { const r=e.currentTarget.getBoundingClientRect(); setSimPlaying(false); setSimTime(Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*simMaxTime) }}>
-          <div style={{ height:'100%', width:pct+'%', background:'var(--blue)', borderRadius:4, transition:'width .05s' }} />
-        </div>
+        <input type="range" min={0} max={simMaxTime} step={0.1} value={simTime}
+          onMouseDown={()=>setSimPlaying(false)}
+          onChange={e=>{ setSimPlaying(false); setSimTime(+e.target.value) }}
+          style={{ flex:1, minWidth:60, accentColor:'var(--blue)', cursor:'pointer' }} />
         <span style={{ fontSize:12, color:'var(--text3)' }}>/{simMaxTime}s</span>
       </div>
 

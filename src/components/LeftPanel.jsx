@@ -8,14 +8,6 @@ const mmToM = mm => mm / 1000
 function Card({ children, style }) {
   return <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--r2)', padding:12, marginBottom:8, boxShadow:'var(--shadow)', ...style }}>{children}</div>
 }
-function CardTitle({ children, right }) {
-  return (
-    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
-      <div style={{ fontSize:11, fontWeight:700, color:'var(--text3)', textTransform:'uppercase', letterSpacing:'.07em' }}>{children}</div>
-      {right}
-    </div>
-  )
-}
 function Label({ children }) {
   return <div style={{ fontSize:12, color:'var(--text3)', fontWeight:500, marginBottom:3 }}>{children}</div>
 }
@@ -88,25 +80,17 @@ function FlatBtn({ onClick, children, danger, full, style:sx }) {
     }}>{children}</button>
   )
 }
-function HeadingPicker({ value, onChange }) {
-  const dirs=[{l:'→',d:0},{l:'↑',d:90},{l:'←',d:180},{l:'↓',d:270}]
-  const norm=((value%360)+360)%360
+
+// Sub-section collapsible (sans carte autour)
+function SubSec({ title, children, defaultOpen=true }) {
+  const [open, setOpen] = useState(defaultOpen)
   return (
-    <div>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:4, marginBottom:6 }}>
-        {dirs.map(d=>{
-          const active=Math.abs(norm-d.d)<1
-          return (
-            <button key={d.d} onClick={()=>onChange(d.d)} style={{
-              padding:'5px 0', borderRadius:'var(--r)', fontSize:17,
-              border:`1.5px solid ${active?'var(--blue)':'var(--border)'}`,
-              background:active?'var(--blue-dim)':'var(--surface2)',
-              color:active?'var(--blue)':'var(--text2)', cursor:'pointer',
-            }}>{d.l}</button>
-          )
-        })}
+    <div style={{ marginBottom:8 }}>
+      <div onClick={()=>setOpen(o=>!o)} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', cursor:'pointer', padding:'5px 0', borderBottom:'1px solid var(--border)', marginBottom: open ? 8 : 0 }}>
+        <span style={{ fontSize:11, fontWeight:700, color:'var(--text3)', textTransform:'uppercase', letterSpacing:'.06em' }}>{title}</span>
+        <span style={{ fontSize:11, color:'var(--text3)' }}>{open?'▾':'▸'}</span>
       </div>
-      <NumInput value={Math.round(value)} min={-360} max={360} step={5} unit="°" onChange={onChange} />
+      {open && children}
     </div>
   )
 }
@@ -128,7 +112,6 @@ function Sec({ title, children, defaultOpen=true, badge }) {
   )
 }
 
-// ── Ligne robot ──
 function RobotRow({ robot, selected, onSelect, onRemove }) {
   return (
     <div onClick={onSelect} style={{
@@ -171,7 +154,6 @@ export default function LeftPanel() {
   const updateRobot      = useSimStore(s=>s.updateRobot)
   const setStlData       = useSimStore(s=>s.setStlData)
   const clearWaypoints   = useSimStore(s=>s.clearWaypoints)
-  const updateWaypointPause = useSimStore(s=>s.updateWaypointPause)
   const setBgImage       = useSimStore(s=>s.setBgImage)
   const bgImage          = useSimStore(s=>s.bgImage)
   const showGrid         = useSimStore(s=>s.showGrid)
@@ -195,7 +177,6 @@ export default function LeftPanel() {
   const sel    = robots.find(r=>r.id===selectedRobotId)
   const selObs = obstacles.find(o=>o.id===selectedObsId)
 
-  // Largeur redimensionnable
   const [panelW, setPanelW] = useState(300)
   const resizing = useRef(false)
   const onResizeStart = useCallback(e => {
@@ -222,6 +203,8 @@ export default function LeftPanel() {
   const ur = (patch) => updateRobot(sel.id, patch)
   const uo = (patch) => updateObstacle(selObs.id, patch)
 
+  const norm360 = v => ((v%360)+360)%360
+
   return (
     <div style={{ display:'flex', flexShrink:0, height:'100%' }}>
       <div style={{ width:panelW, height:'100%', overflowY:'auto', overflowX:'hidden', padding:10, borderRight:'1px solid var(--border)', background:'var(--bg)' }}>
@@ -244,87 +227,92 @@ export default function LeftPanel() {
         {sel && (
           <Sec title={sel.name} defaultOpen>
             {/* Nom + couleur */}
-            <div style={{ display:'flex', alignItems:'center', gap:7, marginBottom:10 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:7, marginBottom:12 }}>
               <ColorSwatch value={sel.color} onChange={v=>ur({color:v})} />
               <input value={sel.name} onChange={e=>ur({name:e.target.value})}
                 style={{ flex:1, padding:'5px 7px', borderRadius:'var(--r)', border:'1.5px solid var(--border)', fontSize:13, fontWeight:600, minWidth:0 }} />
             </div>
 
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-              <Field label="Délai départ" half>
+            {/* Dimensions */}
+            <SubSec title="Dimensions">
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                <Field label="Largeur" half>
+                  <NumInput value={mToMm(sel.width)} min={10} max={500} step={1} unit="mm" onChange={v=>ur({width:mmToM(v)})} />
+                </Field>
+                <Field label="Profondeur" half>
+                  <NumInput value={mToMm(sel.height)} min={10} max={500} step={1} unit="mm" onChange={v=>ur({height:mmToM(v)})} />
+                </Field>
+              </div>
+            </SubSec>
+
+            {/* Vitesse & Accélération */}
+            <SubSec title="Vitesse & Accélération">
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                <Field label="Vitesse" half>
+                  <NumInput value={mToMm(sel.speed)} min={1} max={3000} step={10} unit="mm/s" onChange={v=>ur({speed:mmToM(v)})} />
+                </Field>
+                <Field label="Accélération" half>
+                  <NumInput value={Math.round((sel.accel??1)*1000)} min={100} max={10000} step={100} unit="mm/s²" onChange={v=>ur({accel:v/1000})} />
+                </Field>
+              </div>
+            </SubSec>
+
+            {/* Déplacement */}
+            <SubSec title="Déplacement">
+              <Field label="Délai de départ">
                 <NumInput value={sel.startDelay} min={0} max={60} step={0.5} unit="s" onChange={v=>ur({startDelay:v})} />
               </Field>
-              <Field label="Vitesse" half>
-                <NumInput value={mToMm(sel.speed)} min={1} max={3000} step={10} unit="mm/s" onChange={v=>ur({speed:mmToM(v)})} />
+              <Field label="Mode">
+                <ShapeToggle value={sel.waypointMode??'stop'}
+                  options={[{v:'stop',label:'⏸ Stop aux pts'},{v:'continuous',label:'→ Continu'}]}
+                  onChange={v=>ur({waypointMode:v})} />
               </Field>
-              <Field label="Accélération" half>
-                <NumInput value={Math.round((sel.accel??1)*1000)} min={100} max={10000} step={100} unit="mm/s²" onChange={v=>ur({accel:v/1000})} />
+            </SubSec>
+
+            {/* Collision */}
+            <SubSec title="Collision">
+              <Field label="Forme de collision">
+                <ShapeToggle value={sel.collisionShape??'circle'}
+                  options={[{v:'circle',label:'○ Cercle'},{v:'rect',label:'▭ Rect'}]}
+                  onChange={v=>ur({collisionShape:v})} />
               </Field>
-              <Field label="Largeur" half>
-                <NumInput value={mToMm(sel.width)} min={10} max={500} step={1} unit="mm" onChange={v=>ur({width:mmToM(v)})} />
-              </Field>
-              <Field label="Profondeur" half>
-                <NumInput value={mToMm(sel.height)} min={10} max={500} step={1} unit="mm" onChange={v=>ur({height:mmToM(v)})} />
-              </Field>
-              <Field label="Rayon collision" half>
+              <Field label="Rayon de collision">
                 <NumInput value={mToMm(sel.radius)} min={10} max={400} step={1} unit="mm" onChange={v=>ur({radius:mmToM(v)})} />
               </Field>
-            </div>
+            </SubSec>
 
-            <Field label="Mode de déplacement">
-              <ShapeToggle value={sel.waypointMode??'stop'}
-                options={[{v:'stop',label:'⏸ Stop aux pts'},{v:'continuous',label:'→ Continu'}]}
-                onChange={v=>ur({waypointMode:v})} />
-            </Field>
-
-            <Field label="Forme de collision">
-              <ShapeToggle value={sel.collisionShape??'circle'}
-                options={[{v:'circle',label:'○ Cercle'},{v:'rect',label:'▭ Rect'}]}
-                onChange={v=>ur({collisionShape:v})} />
-            </Field>
-
-            <Field label={`Transparence  ${Math.round((1-(sel.opacity??1))*100)}%`}>
-              <Slider value={1-(sel.opacity??1)} min={0} max={0.95} step={0.05} onChange={v=>ur({opacity:1-v})} />
-            </Field>
-
-            <Field label="Orientation de départ">
-              <HeadingPicker value={sel.heading} onChange={v=>ur({heading:v})} />
-            </Field>
-
-            {/* Pauses aux waypoints */}
-            {sel.waypoints.length>0 && (
-              <Field label="Pauses aux waypoints">
-                <div style={{ maxHeight:140, overflowY:'auto', border:'1px solid var(--border)', borderRadius:'var(--r)', padding:6 }}>
-                  {sel.waypoints.map((wp,i)=>(
-                    <div key={i} style={{ display:'flex', alignItems:'center', gap:6, marginBottom:4 }}>
-                      <span style={{ fontSize:11, color:'var(--text3)', minWidth:40 }}>Pt {i+1}</span>
-                      <NumInput value={wp.pause??0} min={0} max={60} step={0.5} unit="s" onChange={v=>updateWaypointPause(sel.id,i,v)} />
-                    </div>
-                  ))}
-                </div>
+            {/* Apparence */}
+            <SubSec title="Apparence">
+              <Field label={`Transparence  ${Math.round((1-(sel.opacity??1))*100)}%`}>
+                <Slider value={1-(sel.opacity??1)} min={0} max={0.95} step={0.05} onChange={v=>ur({opacity:1-v})} />
               </Field>
-            )}
+              <Field label={`Orientation de départ  ${Math.round(norm360(sel.heading))}°`}>
+                <input type="range" min={0} max={359} step={1} value={norm360(sel.heading)}
+                  onChange={e=>ur({heading:+e.target.value})}
+                  style={{ width:'100%', accentColor:'var(--blue)' }} />
+              </Field>
+            </SubSec>
 
             {/* STL */}
-            <Field label="Géométrie STL">
+            <SubSec title="Géométrie STL" defaultOpen={false}>
               <input type="file" ref={stlRef} accept=".stl" onChange={handleStlImport} style={{ display:'none' }} />
-              <FlatBtn full onClick={()=>stlRef.current?.click()}>
+              <FlatBtn full onClick={()=>stlRef.current?.click()} sx={{ marginBottom:8 }}>
                 📦 {sel.hasStl?'✓ STL importé — changer':'Importer fichier STL'}
               </FlatBtn>
-            </Field>
-
-            {sel.hasStl && (
-              <Field label="Rotation STL">
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:6 }}>
-                  {[['X',sel.stlRotX??-90],['Y',sel.stlRotY??0],['Z',sel.stlRotZ??0]].map(([ax,val])=>(
-                    <div key={ax}>
-                      <div style={{ fontSize:11, color:'var(--text3)', marginBottom:2 }}>{ax}</div>
-                      <NumInput value={val} min={-360} max={360} step={15} unit="°" onChange={v=>ur({[`stlRot${ax}`]:v})} />
+              {sel.hasStl && (
+                <div style={{ marginTop:8 }}>
+                  <Label>Rotation STL</Label>
+                  {[['X', sel.stlRotX??-90], ['Y', sel.stlRotY??0], ['Z', sel.stlRotZ??0]].map(([ax,val])=>(
+                    <div key={ax} style={{ display:'flex', alignItems:'center', gap:6, marginBottom:6 }}>
+                      <span style={{ fontSize:12, fontWeight:600, color:'var(--text3)', width:14, flexShrink:0 }}>{ax}</span>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <NumInput value={val} min={-360} max={360} step={15} unit="°" onChange={v=>ur({[`stlRot${ax}`]:v})} />
+                      </div>
                     </div>
                   ))}
                 </div>
-              </Field>
-            )}
+              )}
+            </SubSec>
 
             <FlatBtn full danger onClick={()=>{pushHistory({robots,obstacles});clearWaypoints(sel.id)}}>
               🗑 Effacer la trajectoire

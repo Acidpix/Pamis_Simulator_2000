@@ -1,6 +1,17 @@
 import React, { useMemo, useState } from 'react'
 import { useSimStore, computeSegments } from '../store/simStore.js'
 
+function PauseInput({ value, onChange }) {
+  return (
+    <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+      <input type="number" value={value} min={0} max={60} step={0.5}
+        onChange={e=>{ const v=parseFloat(e.target.value); if(!isNaN(v)) onChange(v) }}
+        style={{ width:52, padding:'3px 5px', borderRadius:4, border:'1.5px solid var(--border)', fontSize:12 }} />
+      <span style={{ fontSize:11, color:'var(--text3)' }}>s</span>
+    </div>
+  )
+}
+
 function Card({ children, style }) {
   return <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'var(--r2)', marginBottom:10, overflow:'hidden', boxShadow:'var(--shadow)', ...style }}>{children}</div>
 }
@@ -47,7 +58,7 @@ function SegRow({ seg, idx, color }) {
   )
 }
 
-function RobotTrajectory({ robot, defaultOpen }) {
+function RobotTrajectory({ robot, defaultOpen, onPauseChange }) {
   const [open, setOpen] = useState(defaultOpen)
   const segments = useMemo(() => computeSegments(robot), [robot])
   const totalDistMm = segments.reduce((a,s)=>a+s.dist, 0)
@@ -77,7 +88,17 @@ function RobotTrajectory({ robot, defaultOpen }) {
             <div style={{ padding:12, textAlign:'center', color:'var(--text3)', fontSize:13 }}>
               Aucun waypoint
             </div>
-          ) : segments.map((seg,i) => <SegRow key={i} seg={seg} idx={i} color={robot.color} />)}
+          ) : segments.map((seg,i) => (
+            <div key={i}>
+              <SegRow seg={seg} idx={i} color={robot.color} />
+              {onPauseChange && (
+                <div style={{ padding:'4px 14px 10px', borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', gap:8 }}>
+                  <span style={{ fontSize:11, color:'var(--text3)', flex:1 }}>Pause à l'arrivée</span>
+                  <PauseInput value={robot.waypoints[i]?.pause ?? 0} onChange={v=>onPauseChange(i, v)} />
+                </div>
+              )}
+            </div>
+          ))}
         </>
       )}
     </Card>
@@ -85,6 +106,7 @@ function RobotTrajectory({ robot, defaultOpen }) {
 }
 
 export default function RightPanel() {
+  const updateWaypointPause = useSimStore(s=>s.updateWaypointPause)
   const robots         = useSimStore(s=>s.robots)
   const selectedRobotId= useSimStore(s=>s.selectedRobotId)
   const collisions     = useSimStore(s=>s.collisions)
@@ -178,8 +200,10 @@ export default function RightPanel() {
       )}
 
       {/* Trajectoires par robot — toutes collapsibles */}
-      {robots.map((r, i) => (
-        <RobotTrajectory key={r.id} robot={r} defaultOpen={r.id === selectedRobotId || robots.length === 1} />
+      {robots.map((r) => (
+        <RobotTrajectory key={r.id} robot={r}
+          defaultOpen={r.id === selectedRobotId || robots.length === 1}
+          onPauseChange={(idx, v) => updateWaypointPause(r.id, idx, v)} />
       ))}
 
       {robots.length>0 && (
