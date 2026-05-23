@@ -1,7 +1,7 @@
 {
-  "name": "krabi-robot-sim",
+  "name": "pamis-simulator-2000",
   "version": "1.0.0",
-  "description": "Simulateur de trajectoires KRABI Robotics — Coupe de France de Robotique",
+  "description": "Simulateur de trajectoires PAMIS SIMULATOR 2000 — Coupe de France de Robotique",
   "type": "module",
   "scripts": {
     "dev": "vite --host",

@@ -1,4 +1,4 @@
-# KRABI Robot Simulator 🤖
+# PAMIS SIMULATOR 2000 🤖
 
 Simulateur de trajectoires pour la **Coupe de France de Robotique** — équipe Krabi Robotics.
 

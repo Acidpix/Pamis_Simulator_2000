@@ -69,7 +69,7 @@ export default function App() {
                 color: 'rgba(0,200,255,0.15)',
                 letterSpacing: '.2em',
               }}>
-                KRABI SIMULATOR
+                PAMIS SIMULATOR 2000
               </div>
               <div style={{
                 fontFamily: 'var(--font-mono)',
