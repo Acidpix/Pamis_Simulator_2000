@@ -41,9 +41,10 @@ function SegRow({ seg, idx, color }) {
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
         {[
           { l:'Distance', v:seg.dist+' mm' },
-          { l:'Durée',    v:seg.duration+' s' },
-          { l:'Cap',      v:seg.angle+'°' },
-          { l:'Rotation', v:seg.relAngle!==null?(seg.relAngle>0?'+':'')+seg.relAngle+'°':'—' },
+          { l:'Déplacement', v:seg.duration+' s' },
+          { l:'Cap', v:seg.angle+'°' },
+          { l:'Virage', v:seg.relAngle!==null?(seg.relAngle>0?'+':'')+seg.relAngle+'°':'—' },
+          ...(seg.rotDuration>0 ? [{ l:'Rotation', v:seg.rotDuration+' s' }] : []),
         ].map(({l,v})=>(
           <div key={l}>
             <div style={{ fontSize:11, color:'var(--text3)' }}>{l}</div>

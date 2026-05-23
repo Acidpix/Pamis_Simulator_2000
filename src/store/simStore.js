@@ -28,15 +28,17 @@ function makeRobot(ov = {}) {
     heading: 0,
     startDelay: 0,
     speed: 0.30,        // m/s
-    accel: 1.0,         // m/s² (acceleration / décélération)
-    waypointMode: 'stop', // 'stop' | 'continuous'
+    accel: 1.0,         // m/s²
+    rotSpeed: 90,       // deg/s  (vitesse de rotation)
+    rotAccel: 360,      // deg/s² (accélération angulaire)
+    waypointMode: 'stop',
     shapeType: 'rect',
-    collisionShape: 'circle', // 'circle' | 'rect'
+    collisionShape: 'circle',
     width: 0.200, height: 0.200, radius: 0.140,
     opacity: 1.0,
     hasStl: false,
     stlRotX: -90, stlRotY: 0, stlRotZ: 0,
-    waypoints: [],      // [{x, y, pause}]
+    waypoints: [],
     ...ov,
   }
 }
@@ -48,14 +50,14 @@ function makeObs(ov = {}) {
     color: '#64748b',
     x: 1.5, y: 1.0,
     width: 0.200, height: 0.200, radius: 0.140,
-    shape: 'rect',          // 'rect' | 'circle'
-    collisionShape: 'rect', // 'circle' | 'rect'
+    shape: 'rect',
+    collisionShape: 'rect',
     opacity: 1.0,
     ...ov,
   }
 }
 
-// ── Cinématique ──
+// ── Cinématique linéaire (trapézoïdale) ──
 function trapDuration(dist, speed, accel) {
   if (dist < 1e-9) return 0
   const da = speed*speed / (2*accel)
@@ -78,6 +80,10 @@ function trapPos(dist, speed, accel, t) {
   const tr = tT-t; return dist - 0.5*accel*tr*tr
 }
 
+const DEG = Math.PI / 180
+
+function normAngle(a) { while(a>180)a-=360; while(a<-180)a+=360; return a }
+
 export function getRobotPose(robot, t) {
   const et = t - robot.startDelay
   const wps = robot.waypoints
@@ -85,22 +91,41 @@ export function getRobotPose(robot, t) {
 
   let elapsed = 0, px = robot.x, py = robot.y, heading = robot.heading
   const isStop = (robot.waypointMode ?? 'stop') === 'stop'
+  const rotSpeedRad = (robot.rotSpeed ?? 90) * DEG
+  const rotAccelRad = (robot.rotAccel ?? 360) * DEG
 
   for (let i = 0; i < wps.length; i++) {
     const dx = wps[i].x-px, dy = wps[i].y-py
     const dist = Math.hypot(dx, dy)
-    const angle = Math.atan2(dy, dx) * (180/Math.PI)
+    const targetAngle = Math.atan2(dy, dx) / DEG
 
     if (dist > 1e-6) {
+      // ── Phase rotation (mode stop uniquement) ──
+      if (isStop) {
+        const da = normAngle(targetAngle - heading)
+        const absDaRad = Math.abs(da) * DEG
+        if (absDaRad > 0.5 * DEG) {
+          const rotDur = trapDuration(absDaRad, rotSpeedRad, rotAccelRad)
+          if (elapsed + rotDur >= et) {
+            const lt = et - elapsed
+            const rotated = trapPos(absDaRad, rotSpeedRad, rotAccelRad, lt) / DEG
+            return { x:px, y:py, heading: heading + rotated * Math.sign(da), done:false }
+          }
+          elapsed += rotDur
+        }
+        heading = targetAngle
+      }
+
+      // ── Phase déplacement linéaire ──
       const segDur = isStop ? trapDuration(dist, robot.speed, robot.accel??1) : dist/robot.speed
       if (elapsed + segDur >= et) {
         const lt = et - elapsed
         const p = isStop ? trapPos(dist, robot.speed, robot.accel??1, lt) : Math.min(dist, robot.speed*lt)
         const frac = p/dist
-        return { x:px+dx*frac, y:py+dy*frac, heading:angle, done:false }
+        return { x:px+dx*frac, y:py+dy*frac, heading:targetAngle, done:false }
       }
       elapsed += segDur
-      px = wps[i].x; py = wps[i].y; heading = angle
+      px = wps[i].x; py = wps[i].y; heading = targetAngle
     }
 
     const pause = wps[i].pause ?? 0
@@ -114,19 +139,30 @@ export function getRobotPose(robot, t) {
 
 export function computeSegments(robot) {
   const pts = [{ x:robot.x, y:robot.y }, ...robot.waypoints]
-  const segs = []; let cum = robot.startDelay
+  const segs = []
+  let cum = robot.startDelay
+  let currentHeading = robot.heading
   const isStop = (robot.waypointMode??'stop') === 'stop'
+  const rotSpeedRad = (robot.rotSpeed ?? 90) * DEG
+  const rotAccelRad = (robot.rotAccel ?? 360) * DEG
 
   for (let i = 0; i < pts.length-1; i++) {
     const dx = pts[i+1].x-pts[i].x, dy = pts[i+1].y-pts[i].y
     const dist = Math.hypot(dx, dy)
-    const angle = Math.atan2(dy, dx)*(180/Math.PI)
+    const angle = Math.atan2(dy, dx) / DEG
     const dur = isStop ? trapDuration(dist, robot.speed, robot.accel??1) : dist/robot.speed
+
+    let rotDur = 0
+    if (isStop && dist > 1e-6) {
+      const da = normAngle(angle - currentHeading)
+      const absDaRad = Math.abs(da) * DEG
+      if (absDaRad > 0.5 * DEG) rotDur = trapDuration(absDaRad, rotSpeedRad, rotAccelRad)
+    }
+
     let rel = null
     if (i > 0) {
       const pdx = pts[i].x-pts[i-1].x, pdy = pts[i].y-pts[i-1].y
-      rel = angle - Math.atan2(pdy, pdx)*(180/Math.PI)
-      if (rel>180) rel-=360; if (rel<-180) rel+=360
+      rel = normAngle(angle - Math.atan2(pdy, pdx)/DEG)
     }
     segs.push({
       from:pts[i], to:pts[i+1],
@@ -134,10 +170,12 @@ export function computeSegments(robot) {
       angle:Math.round(angle*10)/10,
       relAngle:rel!==null?Math.round(rel*10)/10:null,
       startTime:Math.round(cum*100)/100,
+      rotDuration:Math.round(rotDur*100)/100,
       duration:Math.round(dur*100)/100,
       pause:pts[i+1].pause??0,
     })
-    cum += dur + (pts[i+1].pause??0)
+    cum += rotDur + dur + (pts[i+1].pause??0)
+    if (isStop && dist > 1e-6) currentHeading = angle
   }
   return segs
 }
@@ -210,8 +248,6 @@ export function detectBorderCollisions(robots, tableW, tableH, maxTime, step=0.0
 }
 
 // ── Store ──
-const SAVE_VERSION = 3
-
 export const useSimStore = create(immer((set, get) => ({
   robots: [], selectedRobotId: null,
 
@@ -245,15 +281,18 @@ export const useSimStore = create(immer((set, get) => ({
 
   tableW: 3.0, tableH: 2.0,
   showGrid: true, gridColor: '#ffffff', gridMinorStep: 10, gridMajorStep: 50,
-  bgImage: null, viewMode: '2d', darkMode: false, viewportColor: '#2d6e3e',
-  setBgImage:      u => set(s => { s.bgImage=u }),
-  setShowGrid:     v => set(s => { s.showGrid=v }),
-  setGridColor:    v => set(s => { s.gridColor=v }),
-  setGridMinorStep:v => set(s => { s.gridMinorStep=v }),
-  setGridMajorStep:v => set(s => { s.gridMajorStep=v }),
-  setViewMode:      v => set(s => { s.viewMode=v }),
-  setDarkMode:      v => set(s => { s.darkMode=v }),
-  setViewportColor: v => set(s => { s.viewportColor=v }),
+  bgImage: null, viewMode: '2d', darkMode: false,
+  viewportColor: '#2d6e3e',
+  canvasBgColor: '#dde3ec',
+  setBgImage:       u => set(s => { s.bgImage=u }),
+  setShowGrid:      v => set(s => { s.showGrid=v }),
+  setGridColor:     v => set(s => { s.gridColor=v }),
+  setGridMinorStep: v => set(s => { s.gridMinorStep=v }),
+  setGridMajorStep: v => set(s => { s.gridMajorStep=v }),
+  setViewMode:       v => set(s => { s.viewMode=v }),
+  setDarkMode:       v => set(s => { s.darkMode=v }),
+  setViewportColor:  v => set(s => { s.viewportColor=v }),
+  setCanvasBgColor:  v => set(s => { s.canvasBgColor=v }),
 
   collisions: [], obsCollisions: [], borderCollisions: [],
   setCollisions:       c => set(s => { s.collisions=c }),
@@ -280,11 +319,13 @@ export const useSimStore = create(immer((set, get) => ({
     s.robots    = savedRobots.map(r => { rCount++; return {...makeRobot(),...r} })
     s.obstacles = savedObs.map(o => { oCount++; return {...makeObs(),...o} })
     s.selectedRobotId=s.robots[0]?.id??null; s.selectedObsId=null
-    if(meta.simMaxTime)  s.simMaxTime=meta.simMaxTime
-    if(meta.simSpeed)    s.simSpeed=meta.simSpeed
-    if(meta.gridColor)   s.gridColor=meta.gridColor
+    if(meta.simMaxTime)    s.simMaxTime=meta.simMaxTime
+    if(meta.simSpeed)      s.simSpeed=meta.simSpeed
+    if(meta.gridColor)     s.gridColor=meta.gridColor
     if(meta.gridMinorStep) s.gridMinorStep=meta.gridMinorStep
     if(meta.gridMajorStep) s.gridMajorStep=meta.gridMajorStep
+    if(meta.viewportColor)  s.viewportColor=meta.viewportColor
+    if(meta.canvasBgColor)  s.canvasBgColor=meta.canvasBgColor
     s.simTime=0; s.simPlaying=false; s.collisions=[]; s.obsCollisions=[]; s.borderCollisions=[]
   }),
 })))

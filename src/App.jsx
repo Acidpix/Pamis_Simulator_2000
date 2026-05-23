@@ -11,6 +11,7 @@ export default function App() {
   const addRobot = useSimStore(s => s.addRobot)
   const robots = useSimStore(s => s.robots)
   const mode = useSimStore(s => s.mode)
+  const canvasBgColor = useSimStore(s => s.canvasBgColor)
 
   const handleTableClick = useCallback((tx, ty) => {
     if (mode !== 'draw') return
@@ -25,7 +26,7 @@ export default function App() {
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         <LeftPanel />
 
-        <div style={{ flex: 1, position: 'relative', background: '#dde3ec', overflow: 'hidden' }}>
+        <div style={{ flex: 1, position: 'relative', background: canvasBgColor || '#dde3ec', overflow: 'hidden' }}>
           {robots.length === 0 && (
             <div style={{
               position: 'absolute', inset: 0, zIndex: 10, pointerEvents: 'none',

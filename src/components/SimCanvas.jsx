@@ -5,6 +5,12 @@ import * as THREE from 'three'
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
 import { useSimStore, getRobotPose, stlCache, pushHistory } from '../store/simStore.js'
 
+function BgColorSetter({ color }) {
+  const { gl } = useThree()
+  useEffect(() => { gl.setClearColor(new THREE.Color(color)) }, [color, gl])
+  return null
+}
+
 const DEG = Math.PI / 180
 
 function BgTexture({ url, w, h }) {
@@ -68,12 +74,12 @@ function Table({ w, h, bgImage, showGrid, gridColor, gridMinorStep, gridMajorSte
         </Html>
       ))}
 
-      {/* Bordures 15mm */}
+      {/* Bordures : 15mm d'épaisseur, 70mm de haut */}
       {[
-        { pos:[0,-h/2-0.0075,0.0075], args:[w+0.03,0.015,0.015] },
-        { pos:[0, h/2+0.0075,0.0075], args:[w+0.03,0.015,0.015] },
-        { pos:[-w/2-0.0075,0,0.0075], args:[0.015,h,0.015] },
-        { pos:[ w/2+0.0075,0,0.0075], args:[0.015,h,0.015] },
+        { pos:[0,-h/2-0.0075,0.035], args:[w+0.03,0.015,0.070] },
+        { pos:[0, h/2+0.0075,0.035], args:[w+0.03,0.015,0.070] },
+        { pos:[-w/2-0.0075,0,0.035], args:[0.015,h,0.070] },
+        { pos:[ w/2+0.0075,0,0.035], args:[0.015,h,0.070] },
       ].map((wall,i) => (
         <mesh key={`wall${i}`} position={wall.pos} castShadow receiveShadow>
           <boxGeometry args={wall.args} />
@@ -129,14 +135,14 @@ function TrajectoryLine({ robot, selected, simTime, onWaypointClick, onWaypointD
         lineWidth={selected?3:1.8} transparent opacity={selected?1:.55} />
       {robot.waypoints.map((wp,i) => (
         <group key={i}>
-          <mesh position={[wp.x-1.5,wp.y-1.0,0.012]}
+          <mesh position={[wp.x-1.5,wp.y-1.0,0.030]}
             onClick={e=>{e.stopPropagation();onWaypointClick?.(i)}}
             onPointerDown={e=>{e.stopPropagation();onWaypointDown?.(i)}}>
-            <circleGeometry args={[0.05,16]} />
+            <circleGeometry args={[0.055,16]} />
             <meshBasicMaterial color={robot.color} transparent opacity={.9} />
           </mesh>
           {(wp.pause??0)>0 && (
-            <Html position={[wp.x-1.5,wp.y-1.0+0.08,0.02]} center>
+            <Html position={[wp.x-1.5,wp.y-1.0+0.08,0.031]} center>
               <div style={{ fontSize:10, background:'#f08c00', color:'#fff', padding:'1px 5px', borderRadius:3, whiteSpace:'nowrap' }}>
                 ⏱ {wp.pause}s
               </div>
@@ -286,7 +292,7 @@ function OrthoZoom({ tableW, tableH }) {
 function Scene(props) {
   const { robots, selectedRobotId, obstacles, selectedObsId, simTime,
     collisions, obsCollisions, borderCollisions,
-    showGrid, gridColor, gridMinorStep, gridMajorStep, bgImage, viewportColor,
+    showGrid, gridColor, gridMinorStep, gridMajorStep, bgImage, viewportColor, canvasBgColor,
     tableW, tableH, mode, viewMode,
     selectRobot, selectObstacle, setRobotPosition, setObstaclePosition,
     removeWaypoint, moveWaypoint, updateWaypointPause, onTableClick } = props
@@ -362,6 +368,8 @@ function Scene(props) {
 
   return (
     <>
+      <BgColorSetter color={canvasBgColor || '#dde3ec'} />
+
       {is3d ? (
         <>
           <PerspectiveCamera makeDefault position={[0,-0.8,4.5]} fov={42} near={.01} far={50} />
@@ -415,7 +423,8 @@ function Scene(props) {
 export default function SimCanvas({ onTableClick }) {
   const s = useSimStore()
   return (
-    <Canvas shadows style={{ width:'100%', height:'100%' }} gl={{ antialias:true }}>
+    <Canvas shadows style={{ width:'100%', height:'100%' }} gl={{ antialias:true }}
+      onCreated={({ gl }) => gl.setClearColor(new THREE.Color(s.canvasBgColor || '#dde3ec'))}>
       <Scene
         robots={s.robots} selectedRobotId={s.selectedRobotId}
         obstacles={s.obstacles} selectedObsId={s.selectedObsId}
@@ -423,7 +432,7 @@ export default function SimCanvas({ onTableClick }) {
         obsCollisions={s.obsCollisions} borderCollisions={s.borderCollisions}
         showGrid={s.showGrid} gridColor={s.gridColor}
         gridMinorStep={s.gridMinorStep} gridMajorStep={s.gridMajorStep}
-        bgImage={s.bgImage} viewportColor={s.viewportColor}
+        bgImage={s.bgImage} viewportColor={s.viewportColor} canvasBgColor={s.canvasBgColor}
         tableW={s.tableW} tableH={s.tableH}
         mode={s.mode} viewMode={s.viewMode}
         selectRobot={s.selectRobot} selectObstacle={s.selectObstacle}

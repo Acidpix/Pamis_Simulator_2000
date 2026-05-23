@@ -85,6 +85,8 @@ export default function Toolbar() {
   const gridColor    = useSimStore(s=>s.gridColor)
   const gridMinorStep= useSimStore(s=>s.gridMinorStep)
   const gridMajorStep= useSimStore(s=>s.gridMajorStep)
+  const canvasBgColor= useSimStore(s=>s.canvasBgColor)
+  const viewportColor= useSimStore(s=>s.viewportColor)
 
   const undo = useSimStore(s=>s.undo)
   const redo = useSimStore(s=>s.redo)
@@ -201,7 +203,7 @@ export default function Toolbar() {
 
       <Sep />
 
-      <Btn variant="ghost" small onClick={()=>saveToFile(robots, obstacles, { simMaxTime, simSpeed, gridColor, gridMinorStep, gridMajorStep })}>
+      <Btn variant="ghost" small onClick={()=>saveToFile(robots, obstacles, { simMaxTime, simSpeed, gridColor, gridMinorStep, gridMajorStep, viewportColor, canvasBgColor })}>
         💾 Sauvegarder
       </Btn>
       <input type="file" accept=".json" ref={loadRef} style={{ display:'none' }}

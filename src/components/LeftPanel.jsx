@@ -166,6 +166,8 @@ export default function LeftPanel() {
   const setGridMajorStep = useSimStore(s=>s.setGridMajorStep)
   const viewportColor    = useSimStore(s=>s.viewportColor)
   const setViewportColor = useSimStore(s=>s.setViewportColor)
+  const canvasBgColor    = useSimStore(s=>s.canvasBgColor)
+  const setCanvasBgColor = useSimStore(s=>s.setCanvasBgColor)
   const obstacles        = useSimStore(s=>s.obstacles)
   const selectedObsId    = useSimStore(s=>s.selectedObsId)
   const addObstacle      = useSimStore(s=>s.addObstacle)
@@ -267,6 +269,14 @@ export default function LeftPanel() {
                   options={[{v:'stop',label:'⏸ Stop aux pts'},{v:'continuous',label:'→ Continu'}]}
                   onChange={v=>ur({waypointMode:v})} />
               </Field>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                <Field label="Vit. rotation" half>
+                  <NumInput value={sel.rotSpeed??90} min={5} max={720} step={5} unit="°/s" onChange={v=>ur({rotSpeed:v})} />
+                </Field>
+                <Field label="Acc. rotation" half>
+                  <NumInput value={sel.rotAccel??360} min={10} max={3600} step={10} unit="°/s²" onChange={v=>ur({rotAccel:v})} />
+                </Field>
+              </div>
             </SubSec>
 
             {/* Collision */}
@@ -379,10 +389,17 @@ export default function LeftPanel() {
           </FlatBtn>
           {bgImage && <FlatBtn full danger style={{ marginBottom:8 }} onClick={()=>{if(bgImage?.startsWith('blob:'))URL.revokeObjectURL(bgImage);setBgImage(null)}}>Supprimer l'image</FlatBtn>}
 
-          <Field label="Couleur du fond">
+          <Field label="Surface de la table">
             <div style={{ display:'flex', alignItems:'center', gap:8 }}>
               <ColorSwatch value={viewportColor||'#2d6e3e'} onChange={setViewportColor} />
               <span style={{ fontSize:12, color:'var(--text3)' }}>{viewportColor||'#2d6e3e'}</span>
+            </div>
+          </Field>
+
+          <Field label="Arrière-plan (hors table)">
+            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+              <ColorSwatch value={canvasBgColor||'#dde3ec'} onChange={setCanvasBgColor} />
+              <span style={{ fontSize:12, color:'var(--text3)' }}>{canvasBgColor||'#dde3ec'}</span>
             </div>
           </Field>
 
