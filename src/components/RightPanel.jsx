@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
 import { useSimStore, computeSegments } from '../store/simStore.js'
 
 function Card({ children, style }) {
@@ -21,6 +21,11 @@ function SegRow({ seg, idx, color }) {
       <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:6 }}>
         <span style={{ fontSize:11, fontWeight:700, padding:'2px 8px', borderRadius:4, background:color+'22', color }}>#{idx+1}</span>
         <span style={{ fontSize:12, color:'var(--text3)' }}>départ à {seg.startTime}s</span>
+        {seg.pause > 0 && (
+          <span style={{ fontSize:11, padding:'1px 6px', borderRadius:4, background:'#fef3c7', color:'#d97706', fontWeight:600 }}>
+            ⏱ +{seg.pause}s
+          </span>
+        )}
       </div>
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
         {[
@@ -42,20 +47,52 @@ function SegRow({ seg, idx, color }) {
   )
 }
 
-export default function RightPanel() {
-  const robots        = useSimStore(s=>s.robots)
-  const selectedRobotId= useSimStore(s=>s.selectedRobotId)
-  const collisions    = useSimStore(s=>s.collisions)
-  const obsCollisions = useSimStore(s=>s.obsCollisions)
-  const obstacles     = useSimStore(s=>s.obstacles)
-
-  const selected = robots.find(r=>r.id===selectedRobotId)
-  const segments = useMemo(()=>selected?computeSegments(selected):[], [selected])
-
+function RobotTrajectory({ robot, defaultOpen }) {
+  const [open, setOpen] = useState(defaultOpen)
+  const segments = useMemo(() => computeSegments(robot), [robot])
   const totalDistMm = segments.reduce((a,s)=>a+s.dist, 0)
-  const totalTime   = selected ? segments.reduce((a,s)=>a+s.duration,0)+(selected?.startDelay??0) : 0
+  const totalTime = segments.reduce((a,s)=>a+s.duration, 0) + (robot.startDelay ?? 0)
 
-  const allCols = [...collisions, ...obsCollisions]
+  return (
+    <Card>
+      <div
+        onClick={() => setOpen(o => !o)}
+        style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 14px', cursor:'pointer', borderBottom: open ? '1px solid var(--border)' : 'none' }}
+      >
+        <span style={{ color:robot.color, fontSize:14 }}>●</span>
+        <span style={{ flex:1, fontSize:13, fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{robot.name}</span>
+        <span style={{ fontSize:12, color:'var(--text3)' }}>{totalDistMm}mm</span>
+        <span style={{ fontSize:12, color:'var(--text3)' }}>{totalTime.toFixed(1)}s</span>
+        <span style={{ fontSize:12, color:'var(--text3)' }}>{open ? '▲' : '▼'}</span>
+      </div>
+
+      {open && (
+        <>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', borderBottom:'1px solid var(--border)' }}>
+            <Stat label="Distance" value={totalDistMm>0?totalDistMm+' mm':'—'} color="var(--blue)" />
+            <Stat label="Durée"    value={totalTime>0?totalTime.toFixed(1)+' s':'—'} />
+            <Stat label="Points"   value={segments.length} />
+          </div>
+          {segments.length === 0 ? (
+            <div style={{ padding:12, textAlign:'center', color:'var(--text3)', fontSize:13 }}>
+              Aucun waypoint
+            </div>
+          ) : segments.map((seg,i) => <SegRow key={i} seg={seg} idx={i} color={robot.color} />)}
+        </>
+      )}
+    </Card>
+  )
+}
+
+export default function RightPanel() {
+  const robots         = useSimStore(s=>s.robots)
+  const selectedRobotId= useSimStore(s=>s.selectedRobotId)
+  const collisions     = useSimStore(s=>s.collisions)
+  const obsCollisions  = useSimStore(s=>s.obsCollisions)
+  const borderCollisions= useSimStore(s=>s.borderCollisions)
+  const obstacles      = useSimStore(s=>s.obstacles)
+
+  const allCols = [...collisions, ...obsCollisions, ...borderCollisions]
 
   const handleExport = () => {
     const data = robots.map(r=>({
@@ -69,7 +106,7 @@ export default function RightPanel() {
         from:{ x_mm:Math.round(s.from.x*1000), y_mm:Math.round(s.from.y*1000) },
         to:  { x_mm:Math.round(s.to.x*1000),   y_mm:Math.round(s.to.y*1000) },
         distance_mm:s.dist, heading_deg:s.angle, rotation_deg:s.relAngle,
-        start_time_s:s.startTime, duration_s:s.duration,
+        start_time_s:s.startTime, duration_s:s.duration, pause_s:s.pause,
       })),
     }))
     const a = document.createElement('a')
@@ -107,7 +144,25 @@ export default function RightPanel() {
               const r=robots.find(r=>r.id===c.robotId), o=obstacles.find(o=>o.id===c.obsId)
               return (
                 <div key={i} style={{ fontSize:13, marginBottom:6, padding:'6px 8px', background:'#fffbeb', borderRadius:6 }}>
-                  <span style={{ color:r?.color, fontWeight:700 }}>{r?.name}</span>{' ↔ '}<span style={{ color:o?.color, fontWeight:700 }}>{o?.name}</span>
+                  <span style={{ color:r?.color, fontWeight:700 }}>{r?.name}</span>{' ↔ '}<span style={{ fontWeight:700 }}>{o?.name}</span>
+                  <div style={{ fontSize:12, color:'var(--text3)', marginTop:2 }}>t={c.t}s · ({Math.round(c.x*1000)}, {Math.round(c.y*1000)}) mm</div>
+                </div>
+              )
+            })}
+          </div>
+        </Card>
+      )}
+
+      {/* Collisions bord de table */}
+      {borderCollisions.length>0 && (
+        <Card style={{ borderColor:'#c4b5fd' }}>
+          <CardHead color="#7c3aed">⚠ {borderCollisions.length} collision{borderCollisions.length>1?'s':''} bord de table</CardHead>
+          <div style={{ padding:10 }}>
+            {borderCollisions.map((c,i)=>{
+              const r=robots.find(r=>r.id===c.robotId)
+              return (
+                <div key={i} style={{ fontSize:13, marginBottom:6, padding:'6px 8px', background:'#ede9fe', borderRadius:6 }}>
+                  <span style={{ color:r?.color, fontWeight:700 }}>{r?.name}</span>{' ↔ bord'}
                   <div style={{ fontSize:12, color:'var(--text3)', marginTop:2 }}>t={c.t}s · ({Math.round(c.x*1000)}, {Math.round(c.y*1000)}) mm</div>
                 </div>
               )
@@ -122,43 +177,10 @@ export default function RightPanel() {
         </div>
       )}
 
-      {/* Trajectoire sélectionnée */}
-      {selected && (
-        <Card>
-          <CardHead><span style={{ color:selected.color }}>●</span> {selected.name} — Trajectoire</CardHead>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', borderBottom:'1px solid var(--border)' }}>
-            <Stat label="Distance" value={totalDistMm>0?totalDistMm+' mm':'—'} color="var(--blue)" />
-            <Stat label="Durée"    value={totalTime>0?totalTime.toFixed(1)+' s':'—'} />
-            <Stat label="Points"   value={segments.length} />
-          </div>
-          {segments.length===0 ? (
-            <div style={{ padding:16, textAlign:'center', color:'var(--text3)', fontSize:13 }}>
-              Mode <strong>Tracer</strong> → cliquez la table pour ajouter des waypoints.<br/>
-              <span style={{ fontSize:12, marginTop:4, display:'block' }}>En mode Tracer, cliquez un waypoint existant pour le supprimer.</span>
-            </div>
-          ) : segments.map((seg,i)=><SegRow key={i} seg={seg} idx={i} color={selected.color} />)}
-        </Card>
-      )}
-
-      {/* Résumé */}
-      {robots.length>1 && (
-        <Card>
-          <CardHead>Tous les robots</CardHead>
-          {robots.map(r=>{
-            const segs=computeSegments(r)
-            const dist=segs.reduce((a,s)=>a+s.dist,0)
-            const dur=segs.reduce((a,s)=>a+s.duration,0)+r.startDelay
-            return (
-              <div key={r.id} style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 14px', borderBottom:'1px solid var(--border)' }}>
-                <span style={{ width:9, height:9, borderRadius:'50%', background:r.color, display:'inline-block', flexShrink:0 }} />
-                <span style={{ flex:1, fontSize:13, fontWeight:500, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.name}</span>
-                <span style={{ fontSize:12, color:'var(--text3)' }}>{dist}mm</span>
-                <span style={{ fontSize:12, color:'var(--text3)' }}>{dur.toFixed(1)}s</span>
-              </div>
-            )
-          })}
-        </Card>
-      )}
+      {/* Trajectoires par robot — toutes collapsibles */}
+      {robots.map((r, i) => (
+        <RobotTrajectory key={r.id} robot={r} defaultOpen={r.id === selectedRobotId || robots.length === 1} />
+      ))}
 
       {robots.length>0 && (
         <button onClick={handleExport} style={{

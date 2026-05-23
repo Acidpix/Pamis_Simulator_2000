@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react'
-import { useSimStore, detectCollisions, detectObstacleCollisions, canUndo, canRedo } from '../store/simStore.js'
+import { useSimStore, detectCollisions, detectObstacleCollisions, detectBorderCollisions, canUndo, canRedo } from '../store/simStore.js'
 
 const SAVE_VERSION = 2
 
@@ -131,11 +131,16 @@ export default function Toolbar() {
     return () => cancelAnimationFrame(rafRef.current)
   }, [simPlaying])
 
+  const setBorderCollisions = useSimStore(s=>s.setBorderCollisions)
+  const tableW = useSimStore(s=>s.tableW)
+  const tableH = useSimStore(s=>s.tableH)
+
   // Détection collisions
   useEffect(() => {
     setCollisions(robots.length>=2 ? detectCollisions(robots, simMaxTime) : [])
     setObsCollisions(robots.length>0&&obstacles.length>0 ? detectObstacleCollisions(robots, obstacles, simMaxTime) : [])
-  }, [robots, obstacles, simMaxTime])
+    setBorderCollisions(robots.length>0 ? detectBorderCollisions(robots, tableW, tableH, simMaxTime) : [])
+  }, [robots, obstacles, simMaxTime, tableW, tableH])
 
   const pct = simMaxTime > 0 ? (simTime/simMaxTime)*100 : 0
 
