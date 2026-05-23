@@ -3,7 +3,7 @@ import SimCanvas from './components/SimCanvas.jsx'
 import LeftPanel from './components/LeftPanel.jsx'
 import RightPanel from './components/RightPanel.jsx'
 import Toolbar from './components/Toolbar.jsx'
-import { useSimStore } from './store/simStore.js'
+import { useSimStore, pushHistory } from './store/simStore.js'
 
 export default function App() {
   const selectedRobotId = useSimStore(s => s.selectedRobotId)
@@ -14,12 +14,10 @@ export default function App() {
 
   const handleTableClick = useCallback((tx, ty) => {
     if (mode !== 'draw') return
-    if (!selectedRobotId) {
-      addRobot({ x: tx, y: ty })
-      return
-    }
+    pushHistory({ robots })
+    if (!selectedRobotId) { addRobot({ x: tx, y: ty }); return }
     addWaypoint(selectedRobotId, tx, ty)
-  }, [mode, selectedRobotId, addWaypoint, addRobot])
+  }, [mode, selectedRobotId, addWaypoint, addRobot, robots])
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100vw', height: '100vh', background: 'var(--bg)', overflow: 'hidden' }}>
