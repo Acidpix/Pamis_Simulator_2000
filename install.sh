@@ -28,17 +28,39 @@ if [[ $EUID -ne 0 ]]; then
   exit 1
 fi
 
-for cmd in git node npm; do
-  if ! command -v "$cmd" &>/dev/null; then
-    echo "Dépendance manquante : $cmd" >&2
+if ! command -v git &>/dev/null; then
+  echo "Dépendance manquante : git" >&2
+  exit 1
+fi
+
+# ── Installation de Node.js + npm si absents ──────────────────────────────────
+if ! command -v node &>/dev/null || ! command -v npm &>/dev/null; then
+  echo "==> Node.js / npm non trouvés, installation via NodeSource (Node 20 LTS)"
+  if command -v apt-get &>/dev/null; then
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+    apt-get install -y nodejs
+  elif command -v dnf &>/dev/null; then
+    curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
+    dnf install -y nodejs
+  elif command -v yum &>/dev/null; then
+    curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
+    yum install -y nodejs
+  else
+    echo "Gestionnaire de paquets non supporté. Installez Node.js 20+ manuellement." >&2
     exit 1
   fi
-done
+fi
 
 NODE_MAJOR=$(node -e "process.stdout.write(process.versions.node.split('.')[0])")
-if [[ $NODE_MAJOR -lt 18 ]]; then
-  echo "Node.js >= 18 requis (version actuelle : $(node -v))" >&2
+if [[ $NODE_MAJOR -lt 20 ]]; then
+  echo "Node.js >= 20 requis (version actuelle : $(node -v))" >&2
   exit 1
+fi
+
+# ── Installation de Vite globalement si absent ────────────────────────────────
+if ! command -v vite &>/dev/null; then
+  echo "==> Installation de vite globalement"
+  npm install -g vite
 fi
 
 echo "==> Installation de ${APP_NAME} dans ${INSTALL_DIR} (port ${PORT}, user ${RUN_AS})"
