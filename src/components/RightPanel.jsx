@@ -1,89 +1,64 @@
 import React, { useMemo } from 'react'
 import { useSimStore, computeSegments } from '../store/simStore.js'
 
-function angleArrow(deg) {
-  if (deg === null) return '●'
-  if (Math.abs(deg) < 5) return '→'
-  if (deg > 0) return `↻ +${deg}°`
-  return `↺ ${deg}°`
-}
-
-function SegmentRow({ seg, idx, color }) {
+function Card({ children, style }) {
   return (
     <div style={{
-      padding: '7px 8px',
-      borderBottom: '1px solid var(--border)',
-      fontFamily: 'var(--font-mono)',
+      background: 'var(--surface)', border: '1px solid var(--border)',
+      borderRadius: 10, marginBottom: 10, overflow: 'hidden',
+      boxShadow: 'var(--shadow)', ...style,
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-        <span style={{
-          fontSize: 9, padding: '1px 5px',
-          background: color + '22',
-          border: `1px solid ${color}55`,
-          borderRadius: 2,
-          color: color,
-        }}>SEG {idx + 1}</span>
-        <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>t={seg.startTime}s</span>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
-        <div>
-          <div style={{ fontSize: 9, color: 'var(--text-muted)' }}>DISTANCE</div>
-          <div style={{ fontSize: 13, color: 'var(--accent)', fontWeight: 700 }}>{seg.dist}<span style={{ fontSize: 9, color: 'var(--text-muted)', marginLeft: 2 }}>mm</span></div>
-        </div>
-        <div>
-          <div style={{ fontSize: 9, color: 'var(--text-muted)' }}>CAP</div>
-          <div style={{ fontSize: 13, color: 'var(--accent2)', fontWeight: 700 }}>{seg.angle}°</div>
-        </div>
-        <div>
-          <div style={{ fontSize: 9, color: 'var(--text-muted)' }}>DURÉE</div>
-          <div style={{ fontSize: 12, color: 'var(--text-primary)' }}>{seg.duration}s</div>
-        </div>
-        <div>
-          <div style={{ fontSize: 9, color: 'var(--text-muted)' }}>ROTATION</div>
-          <div style={{ fontSize: 11, color: seg.relAngle !== null ? 'var(--warn)' : 'var(--text-muted)' }}>
-            {angleArrow(seg.relAngle)}
-          </div>
-        </div>
-      </div>
-
-      <div style={{
-        marginTop: 5,
-        fontSize: 9,
-        color: 'var(--text-muted)',
-        fontFamily: 'var(--font-mono)',
-      }}>
-        ({Math.round(seg.from.x*100)/100}, {Math.round(seg.from.y*100)/100})
-        {' → '}
-        ({Math.round(seg.to.x*100)/100}, {Math.round(seg.to.y*100)/100})
-      </div>
+      {children}
     </div>
   )
 }
 
-function CollisionAlert({ collision, robots }) {
-  const a = robots.find(r => r.id === collision.aId)
-  const b = robots.find(r => r.id === collision.bId)
-  if (!a || !b) return null
+function CardHead({ children, color }) {
   return (
     <div style={{
-      padding: '6px 8px',
-      background: 'var(--danger-dim)',
-      border: '1px solid rgba(255,61,90,0.4)',
-      borderRadius: 4,
-      marginBottom: 5,
-      fontFamily: 'var(--font-mono)',
+      padding: '9px 14px', borderBottom: '1px solid var(--border)',
+      fontSize: 11, fontWeight: 700, textTransform: 'uppercase',
+      letterSpacing: '.06em', color: color || 'var(--text3)',
     }}>
-      <div style={{ fontSize: 10, color: 'var(--danger)', fontWeight: 700, marginBottom: 2 }}>
-        ⚠ COLLISION t={collision.t}s
+      {children}
+    </div>
+  )
+}
+
+function Stat({ label, value, color }) {
+  return (
+    <div style={{ textAlign: 'center', padding: '8px 4px' }}>
+      <div style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 2 }}>{label}</div>
+      <div style={{ fontSize: 15, fontWeight: 700, color: color || 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{value}</div>
+    </div>
+  )
+}
+
+function SegRow({ seg, idx, color }) {
+  return (
+    <div style={{ padding: '9px 14px', borderBottom: '1px solid var(--border)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+        <span style={{
+          fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 4,
+          background: color + '20', color: color,
+        }}>#{idx + 1}</span>
+        <span style={{ fontSize: 11, color: 'var(--text3)' }}>départ à {seg.startTime}s</span>
       </div>
-      <div style={{ fontSize: 9, color: 'var(--text-secondary)' }}>
-        <span style={{ color: a.color }}>{a.name}</span>
-        {' ↔ '}
-        <span style={{ color: b.color }}>{b.name}</span>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+        {[
+          { l: 'Distance', v: seg.dist + ' mm' },
+          { l: 'Durée', v: seg.duration + ' s' },
+          { l: 'Cap', v: seg.angle + '°' },
+          { l: 'Rotation', v: seg.relAngle !== null ? (seg.relAngle > 0 ? '+' : '') + seg.relAngle + '°' : '—' },
+        ].map(({ l, v }) => (
+          <div key={l}>
+            <div style={{ fontSize: 10, color: 'var(--text3)' }}>{l}</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{v}</div>
+          </div>
+        ))}
       </div>
-      <div style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 2 }}>
-        @ ({Math.round(collision.x*100)/100}m, {Math.round(collision.y*100)/100}m)
+      <div style={{ marginTop: 5, fontSize: 10, color: 'var(--text3)' }}>
+        ({seg.from.x.toFixed(2)}, {seg.from.y.toFixed(2)}) → ({seg.to.x.toFixed(2)}, {seg.to.y.toFixed(2)}) m
       </div>
     </div>
   )
@@ -93,138 +68,97 @@ export default function RightPanel() {
   const robots = useSimStore(s => s.robots)
   const selectedRobotId = useSimStore(s => s.selectedRobotId)
   const collisions = useSimStore(s => s.collisions)
-  const simTime = useSimStore(s => s.simTime)
 
   const selected = robots.find(r => r.id === selectedRobotId)
   const segments = useMemo(() => selected ? computeSegments(selected) : [], [selected])
 
-  const totalDist = segments.reduce((acc, s) => acc + s.dist, 0)
+  const totalDist = segments.reduce((a, s) => a + s.dist, 0)
   const totalTime = selected
-    ? segments.reduce((acc, s) => acc + s.duration, 0) + (selected?.startDelay ?? 0)
+    ? segments.reduce((a, s) => a + s.duration, 0) + (selected?.startDelay ?? 0)
     : 0
 
   const handleExport = () => {
     const data = robots.map(r => ({
-      name: r.name,
-      color: r.color,
+      name: r.name, color: r.color,
       startPosition: { x: r.x, y: r.y },
-      startDelay: r.startDelay,
-      speed: r.speed,
-      radius: r.radius,
+      startDelay: r.startDelay, speed: r.speed, radius: r.radius,
       segments: computeSegments(r).map(s => ({
-        from: { x: Math.round(s.from.x*1000), y: Math.round(s.from.y*1000) },
-        to:   { x: Math.round(s.to.x*1000),   y: Math.round(s.to.y*1000) },
-        distance_mm: s.dist,
-        heading_deg: s.angle,
-        rotation_deg: s.relAngle,
-        start_time_s: s.startTime,
-        duration_s: s.duration,
+        from: { x: Math.round(s.from.x * 1000), y: Math.round(s.from.y * 1000) },
+        to:   { x: Math.round(s.to.x * 1000),   y: Math.round(s.to.y * 1000) },
+        distance_mm: s.dist, heading_deg: s.angle,
+        rotation_deg: s.relAngle, start_time_s: s.startTime, duration_s: s.duration,
       })),
     }))
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
-    a.href = url; a.download = 'krabi_trajectoires.json'; a.click()
-    URL.revokeObjectURL(url)
-  }
-
-  const cardStyle = {
-    background: 'var(--bg-card)',
-    border: '1px solid var(--border)',
-    borderRadius: 6,
-    marginBottom: 10,
-    overflow: 'hidden',
-  }
-
-  const sectionHeaderStyle = {
-    padding: '8px 14px',
-    borderBottom: '1px solid var(--border)',
-    fontFamily: 'var(--font-display)',
-    fontSize: 9,
-    letterSpacing: '.15em',
-    color: 'var(--accent)',
-    textTransform: 'uppercase',
+    a.href = URL.createObjectURL(blob)
+    a.download = 'pamis_trajectoires.json'
+    a.click()
   }
 
   return (
     <div style={{
-      width: 230,
-      height: '100%',
-      overflowY: 'auto',
-      padding: '12px 10px',
-      borderLeft: '1px solid var(--border)',
-      flexShrink: 0,
+      width: 240, height: '100%', overflowY: 'auto', flexShrink: 0,
+      padding: 12, borderLeft: '1px solid var(--border)', background: 'var(--bg)',
     }}>
       {/* Collisions */}
       {collisions.length > 0 && (
-        <div style={{ marginBottom: 10 }}>
-          <div style={{ ...sectionHeaderStyle, color: 'var(--danger)', paddingLeft: 0 }}>
-            ⚠ {collisions.length} Collision{collisions.length > 1 ? 's' : ''} détectée{collisions.length > 1 ? 's' : ''}
+        <Card style={{ borderColor: '#fca5a5' }}>
+          <CardHead color="var(--red)">⚠ {collisions.length} collision{collisions.length > 1 ? 's' : ''}</CardHead>
+          <div style={{ padding: 10 }}>
+            {collisions.map((c, i) => {
+              const a = robots.find(r => r.id === c.aId)
+              const b = robots.find(r => r.id === c.bId)
+              return (
+                <div key={i} style={{ fontSize: 12, marginBottom: 6, padding: '6px 8px', background: 'var(--red-dim)', borderRadius: 6 }}>
+                  <span style={{ color: a?.color, fontWeight: 600 }}>{a?.name}</span>
+                  {' ↔ '}
+                  <span style={{ color: b?.color, fontWeight: 600 }}>{b?.name}</span>
+                  <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>t = {c.t}s — ({c.x.toFixed(2)}, {c.y.toFixed(2)}) m</div>
+                </div>
+              )
+            })}
           </div>
-          <div style={{ marginTop: 6 }}>
-            {collisions.map((c, i) => (
-              <CollisionAlert key={i} collision={c} robots={robots} />
-            ))}
-          </div>
-        </div>
+        </Card>
       )}
 
       {collisions.length === 0 && robots.length > 1 && (
         <div style={{
-          marginBottom: 10, padding: '6px 10px',
-          background: 'var(--accent2-dim)',
-          border: '1px solid rgba(10,255,157,0.2)',
-          borderRadius: 4,
-          fontSize: 10,
-          color: 'var(--accent2)',
-          fontFamily: 'var(--font-mono)',
+          marginBottom: 10, padding: '8px 12px', borderRadius: 8,
+          background: 'var(--green-dim)', border: '1px solid #bbf7d0',
+          fontSize: 12, color: 'var(--green)', fontWeight: 500,
         }}>
           ✓ Aucune collision détectée
         </div>
       )}
 
-      {/* Segments du robot sélectionné */}
+      {/* Trajectoire robot sélectionné */}
       {selected && (
-        <div style={cardStyle}>
-          <div style={sectionHeaderStyle}>
-            <span style={{ color: selected.color }}>{selected.name}</span> — Trajectoire
+        <Card>
+          <CardHead>
+            <span style={{ color: selected.color }}>●</span> {selected.name} — Trajectoire
+          </CardHead>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', borderBottom: '1px solid var(--border)' }}>
+            <Stat label="Distance" value={totalDist > 0 ? (totalDist / 1000).toFixed(2) + ' m' : '—'} color="var(--blue)" />
+            <Stat label="Durée" value={totalTime > 0 ? totalTime.toFixed(1) + ' s' : '—'} />
+            <Stat label="Points" value={segments.length} />
           </div>
 
-          {/* Résumé */}
-          <div style={{
-            display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
-            gap: 1, borderBottom: '1px solid var(--border)',
-          }}>
-            {[
-              { label: 'DISTANCE', value: totalDist + 'mm' },
-              { label: 'DURÉE', value: totalTime.toFixed(1) + 's' },
-              { label: 'SEGMENTS', value: segments.length },
-            ].map(({ label, value }) => (
-              <div key={label} style={{ padding: '8px', textAlign: 'center', borderRight: '1px solid var(--border)' }}>
-                <div style={{ fontSize: 8, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', marginBottom: 2 }}>{label}</div>
-                <div style={{ fontSize: 13, color: 'var(--accent)', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{value}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* Liste des segments */}
           {segments.length === 0 ? (
-            <div style={{ padding: 14, textAlign: 'center', color: 'var(--text-muted)', fontSize: 11 }}>
-              Cliquez sur la table en mode<br />
-              <span style={{ color: 'var(--accent)' }}>Tracer</span> pour ajouter des waypoints
+            <div style={{ padding: 16, textAlign: 'center', color: 'var(--text3)', fontSize: 12 }}>
+              Cliquez sur la table en mode <strong>Tracer</strong> pour ajouter des waypoints.
             </div>
           ) : (
-            segments.map((seg, i) => (
-              <SegmentRow key={i} seg={seg} idx={i} color={selected.color} />
-            ))
+            segments.map((seg, i) => <SegRow key={i} seg={seg} idx={i} color={selected.color} />)
           )}
-        </div>
+        </Card>
       )}
 
-      {/* Tous les robots résumé */}
-      {robots.length > 0 && (
-        <div style={cardStyle}>
-          <div style={sectionHeaderStyle}>Tous les robots</div>
+      {/* Résumé tous les robots */}
+      {robots.length > 1 && (
+        <Card>
+          <CardHead>Tous les robots</CardHead>
           {robots.map(r => {
             const segs = computeSegments(r)
             const dist = segs.reduce((a, s) => a + s.dist, 0)
@@ -232,65 +166,42 @@ export default function RightPanel() {
             return (
               <div key={r.id} style={{
                 display: 'flex', alignItems: 'center', gap: 8,
-                padding: '6px 10px',
-                borderBottom: '1px solid var(--border)',
-                fontFamily: 'var(--font-mono)',
+                padding: '7px 14px', borderBottom: '1px solid var(--border)',
               }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: r.color, boxShadow: `0 0 5px ${r.color}`, flexShrink: 0, display: 'inline-block' }} />
-                <span style={{ flex: 1, fontSize: 10, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {r.name}
-                </span>
-                <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>{dist}mm</span>
-                <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>{dur.toFixed(1)}s</span>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: r.color, display: 'inline-block', flexShrink: 0 }} />
+                <span style={{ flex: 1, fontSize: 12, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</span>
+                <span style={{ fontSize: 11, color: 'var(--text3)' }}>{dist}mm</span>
+                <span style={{ fontSize: 11, color: 'var(--text3)' }}>{dur.toFixed(1)}s</span>
               </div>
             )
           })}
-        </div>
+        </Card>
       )}
 
       {/* Export */}
       {robots.length > 0 && (
-        <button
-          onClick={handleExport}
-          style={{
-            width: '100%', padding: '9px',
-            background: 'var(--accent-glow)',
-            border: '1px solid var(--border-bright)',
-            borderRadius: 5,
-            color: 'var(--accent)',
-            fontFamily: 'var(--font-display)',
-            fontSize: 10,
-            letterSpacing: '.1em',
-            cursor: 'pointer',
-            transition: 'all .15s',
-          }}
-          onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,200,255,0.25)'}
-          onMouseLeave={e => e.currentTarget.style.background = 'var(--accent-glow)'}
-        >
-          ↓ EXPORTER JSON
+        <button onClick={handleExport} style={{
+          width: '100%', padding: 10, borderRadius: 8,
+          border: '1.5px solid var(--border2)', background: 'var(--surface)',
+          color: 'var(--text)', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+          boxShadow: 'var(--shadow)',
+        }}>
+          ⬇ Exporter JSON
         </button>
       )}
 
       {/* Aide */}
-      <div style={{
-        marginTop: 10,
-        padding: '10px',
-        background: 'var(--bg-card)',
-        border: '1px solid var(--border)',
-        borderRadius: 6,
-        fontSize: 10,
-        color: 'var(--text-muted)',
-        fontFamily: 'var(--font-mono)',
-        lineHeight: 1.7,
-      }}>
-        <div style={{ color: 'var(--text-secondary)', marginBottom: 4 }}>— Aide —</div>
-        <div><span style={{ color: 'var(--accent)' }}>Clic table</span> → waypoint</div>
-        <div><span style={{ color: 'var(--accent)' }}>Mode déplacer</span> → drag robot</div>
-        <div><span style={{ color: 'var(--accent)' }}>Scroll</span> → zoom</div>
-        <div><span style={{ color: 'var(--accent)' }}>▶ Simuler</span> → animation</div>
-        <div><span style={{ color: 'var(--accent2)' }}>Angles</span> = cap absolu</div>
-        <div><span style={{ color: 'var(--warn)' }}>Rotation</span> = relatif seg</div>
-      </div>
+      {robots.length === 0 && (
+        <Card>
+          <CardHead>Comment utiliser</CardHead>
+          <div style={{ padding: 12, fontSize: 12, color: 'var(--text2)', lineHeight: 1.8 }}>
+            <div>① Ajoutez un robot (panneau gauche)</div>
+            <div>② Mode <strong>Tracer</strong> → cliquez sur la table</div>
+            <div>③ Appuyez sur <strong>▶ Simuler</strong></div>
+            <div>④ Scroll pour zoomer sur la table</div>
+          </div>
+        </Card>
+      )}
     </div>
   )
 }

@@ -33,6 +33,11 @@ if ! command -v git &>/dev/null; then
   exit 1
 fi
 
+if ! command -v curl &>/dev/null; then
+  echo "Dépendance manquante : curl" >&2
+  exit 1
+fi
+
 # ── Installation de Node.js + npm si absents ──────────────────────────────────
 if ! command -v node &>/dev/null || ! command -v npm &>/dev/null; then
   echo "==> Node.js / npm non trouvés, installation via NodeSource (Node 20 LTS)"
@@ -57,15 +62,17 @@ if [[ $NODE_MAJOR -lt 20 ]]; then
   exit 1
 fi
 
-# ── Installation de Vite globalement si absent ────────────────────────────────
-if ! command -v vite &>/dev/null; then
-  echo "==> Installation de vite globalement"
-  npm install -g vite
+# ── Installation de serve (serveur statique de prod) ─────────────────────────
+if ! command -v serve &>/dev/null; then
+  echo "==> Installation de serve globalement"
+  npm install -g serve
 fi
 
 echo "==> Installation de ${APP_NAME} dans ${INSTALL_DIR} (port ${PORT}, user ${RUN_AS})"
 
 # ── Clone ou mise à jour du dépôt ────────────────────────────────────────────
+git config --global --add safe.directory "${INSTALL_DIR}"
+
 if [[ -d "${INSTALL_DIR}/.git" ]]; then
   echo "==> Dépôt existant détecté, mise à jour (git pull)"
   git -C "${INSTALL_DIR}" fetch origin
@@ -79,8 +86,9 @@ fi
 # ── Build de production ───────────────────────────────────────────────────────
 echo "==> npm ci + vite build"
 cd "${INSTALL_DIR}"
-npm ci --omit=dev 2>&1 | tail -5
-npm run build
+npm ci 2>&1 | tail -5          # inclut les devDeps (vite, plugin-react…)
+NODE_OPTIONS="--max-old-space-size=512" npm run build
+npm prune --omit=dev           # supprime les devDeps après le build
 
 # ── Permissions ───────────────────────────────────────────────────────────────
 if ! id "${RUN_AS}" &>/dev/null; then
@@ -89,6 +97,8 @@ fi
 chown -R "${RUN_AS}:${RUN_AS}" "${INSTALL_DIR}"
 
 # ── Service systemd ───────────────────────────────────────────────────────────
+SERVE_BIN=$(command -v serve)
+
 cat > "${SERVICE_FILE}" <<EOF
 [Unit]
 Description=Pamis Simulator 2000
@@ -98,7 +108,9 @@ After=network.target
 Type=simple
 User=${RUN_AS}
 WorkingDirectory=${INSTALL_DIR}
-ExecStart=$(command -v npm) run preview -- --port ${PORT} --host
+Environment=NODE_ENV=production
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=${SERVE_BIN} -s dist -l ${PORT}
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal

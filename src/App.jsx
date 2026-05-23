@@ -15,7 +15,6 @@ export default function App() {
   const handleTableClick = useCallback((tx, ty) => {
     if (mode !== 'draw') return
     if (!selectedRobotId) {
-      // Créer un robot à la position cliquée si aucun sélectionné
       addRobot({ x: tx, y: ty })
       return
     }
@@ -23,67 +22,25 @@ export default function App() {
   }, [mode, selectedRobotId, addWaypoint, addRobot])
 
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      width: '100vw',
-      height: '100vh',
-      background: 'var(--bg-void)',
-      overflow: 'hidden',
-    }}>
+    <div style={{ display: 'flex', flexDirection: 'column', width: '100vw', height: '100vh', background: 'var(--bg)', overflow: 'hidden' }}>
       <Toolbar />
-
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         <LeftPanel />
 
-        {/* Zone centrale */}
-        <div style={{
-          flex: 1,
-          position: 'relative',
-          background: 'var(--bg-base)',
-          overflow: 'hidden',
-        }}>
-          {/* Grille de fond ambiante */}
-          <div style={{
-            position: 'absolute', inset: 0,
-            backgroundImage: `
-              linear-gradient(rgba(0,200,255,0.03) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(0,200,255,0.03) 1px, transparent 1px)
-            `,
-            backgroundSize: '40px 40px',
-            pointerEvents: 'none',
-          }} />
-
+        <div style={{ flex: 1, position: 'relative', background: '#dde3ec', overflow: 'hidden' }}>
           {robots.length === 0 && (
             <div style={{
-              position: 'absolute', inset: 0,
-              display: 'flex', flexDirection: 'column',
-              alignItems: 'center', justifyContent: 'center',
-              pointerEvents: 'none',
-              zIndex: 10,
-              gap: 12,
+              position: 'absolute', inset: 0, zIndex: 10, pointerEvents: 'none',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              gap: 8,
             }}>
-              <div style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: 22,
-                color: 'rgba(0,200,255,0.15)',
-                letterSpacing: '.2em',
-              }}>
-                PAMIS SIMULATOR 2000
-              </div>
-              <div style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: 12,
-                color: 'rgba(0,200,255,0.3)',
-                textAlign: 'center',
-                lineHeight: 1.8,
-              }}>
+              <div style={{ fontSize: 16, fontWeight: 600, color: '#64748b' }}>Aucun robot</div>
+              <div style={{ fontSize: 13, color: '#94a3b8', textAlign: 'center', lineHeight: 1.7 }}>
                 Ajoutez un robot depuis le panneau gauche<br />
-                puis cliquez sur la table pour tracer une trajectoire
+                puis cliquez sur la table pour tracer sa trajectoire
               </div>
             </div>
           )}
-
           <SimCanvas onTableClick={handleTableClick} />
         </div>
 

@@ -1,101 +1,90 @@
 import React, { useRef } from 'react'
-import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
 import { useSimStore } from '../store/simStore.js'
 
-const ICONS = {
-  robot: '⬡',
-  plus:  '+',
-  trash: '✕',
-  stl:   '◈',
-  svg:   '◇',
-  upload:'↑',
-  eye:   '◉',
+function Label({ children }) {
+  return <div style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 500, marginBottom: 4 }}>{children}</div>
 }
 
-function ColorDot({ color, size = 10 }) {
+function Field({ label, children }) {
   return (
-    <span style={{
-      display: 'inline-block',
-      width: size, height: size,
-      borderRadius: '50%',
-      background: color,
-      boxShadow: `0 0 6px ${color}`,
-      flexShrink: 0,
-    }} />
-  )
-}
-
-function RobotRow({ robot, selected, onSelect, onRemove }) {
-  return (
-    <div
-      onClick={onSelect}
-      style={{
-        display: 'flex', alignItems: 'center', gap: 8,
-        padding: '6px 8px',
-        borderRadius: 4,
-        border: `1px solid ${selected ? robot.color + '80' : 'transparent'}`,
-        background: selected ? robot.color + '14' : 'transparent',
-        cursor: 'pointer',
-        transition: 'all .15s',
-        marginBottom: 2,
-      }}
-    >
-      <ColorDot color={robot.color} />
-      <span style={{ flex: 1, fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-primary)' }}>
-        {robot.name}
-      </span>
-      <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-        {robot.waypoints.length}wp
-      </span>
-      <button
-        onClick={e => { e.stopPropagation(); onRemove() }}
-        style={{ background: 'none', color: 'var(--text-muted)', fontSize: 12, padding: '0 4px' }}
-        title="Supprimer"
-      >✕</button>
+    <div style={{ marginBottom: 10 }}>
+      <Label>{label}</Label>
+      {children}
     </div>
   )
 }
 
-function SectionTitle({ children }) {
+function NumInput({ value, min, max, step, unit, onChange }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <input type="number" value={value} min={min} max={max} step={step}
+        onChange={e => onChange(parseFloat(e.target.value))}
+        style={{
+          flex: 1, padding: '5px 8px', borderRadius: 'var(--r)',
+          border: '1.5px solid var(--border)', background: 'var(--surface2)',
+          fontSize: 13, color: 'var(--text)',
+        }} />
+      {unit && <span style={{ fontSize: 11, color: 'var(--text3)', minWidth: 24 }}>{unit}</span>}
+    </div>
+  )
+}
+
+function Card({ children }) {
   return (
     <div style={{
-      fontFamily: 'var(--font-display)',
-      fontSize: 9,
-      letterSpacing: '.15em',
-      color: 'var(--accent)',
-      textTransform: 'uppercase',
-      marginBottom: 8,
-      paddingBottom: 4,
-      borderBottom: '1px solid var(--border)',
+      background: 'var(--surface)', border: '1px solid var(--border)',
+      borderRadius: 'var(--r2)', padding: 14, marginBottom: 10,
+      boxShadow: 'var(--shadow)',
     }}>
       {children}
     </div>
   )
 }
 
-function NumberInput({ label, value, min, max, step, unit, onChange }) {
+function CardTitle({ children }) {
+  return <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 10 }}>{children}</div>
+}
+
+function RobotRow({ robot, selected, onSelect, onRemove }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-      <span style={{ color: 'var(--text-secondary)', fontSize: 11, width: 80, flexShrink: 0 }}>{label}</span>
-      <input
-        type="number"
-        value={value}
-        min={min} max={max} step={step}
-        onChange={e => onChange(parseFloat(e.target.value))}
+    <div onClick={onSelect} style={{
+      display: 'flex', alignItems: 'center', gap: 8, padding: '7px 8px',
+      borderRadius: 'var(--r)', cursor: 'pointer', marginBottom: 2,
+      background: selected ? 'var(--blue-dim)' : 'transparent',
+      border: `1.5px solid ${selected ? 'var(--blue-mid)' : 'transparent'}`,
+      transition: 'all .1s',
+    }}>
+      <span style={{ width: 10, height: 10, borderRadius: '50%', background: robot.color, flexShrink: 0, display: 'inline-block' }} />
+      <span style={{ flex: 1, fontWeight: 500, fontSize: 13, color: selected ? 'var(--blue)' : 'var(--text)' }}>
+        {robot.name}
+      </span>
+      <span style={{ fontSize: 11, color: 'var(--text3)' }}>{robot.waypoints.length} pt</span>
+      <button onClick={e => { e.stopPropagation(); onRemove() }}
         style={{
-          width: 60,
-          padding: '3px 6px',
-          background: 'var(--bg-base)',
-          border: '1px solid var(--border)',
-          borderRadius: 3,
-          color: 'var(--accent)',
-          fontFamily: 'var(--font-mono)',
-          fontSize: 12,
-          textAlign: 'right',
+          width: 20, height: 20, borderRadius: 4, border: 'none',
+          background: 'transparent', color: 'var(--text3)', fontSize: 14, lineHeight: 1,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}
-      />
-      {unit && <span style={{ color: 'var(--text-muted)', fontSize: 10 }}>{unit}</span>}
+        title="Supprimer"
+      >×</button>
     </div>
+  )
+}
+
+function FlatBtn({ onClick, children, danger, full, style: extra }) {
+  return (
+    <button onClick={onClick} style={{
+      width: full ? '100%' : undefined,
+      padding: '7px 12px',
+      border: `1.5px solid ${danger ? '#fca5a5' : 'var(--border)'}`,
+      borderRadius: 'var(--r)', background: danger ? 'var(--red-dim)' : 'var(--surface2)',
+      color: danger ? 'var(--red)' : 'var(--text2)',
+      fontSize: 13, fontWeight: 500, cursor: 'pointer',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+      ...extra,
+    }}>
+      {children}
+    </button>
   )
 }
 
@@ -107,205 +96,125 @@ export default function LeftPanel() {
   const selectRobot = useSimStore(s => s.selectRobot)
   const updateRobot = useSimStore(s => s.updateRobot)
   const setStlData = useSimStore(s => s.setStlData)
-  const setSvgData = useSimStore(s => s.setSvgData)
   const clearWaypoints = useSimStore(s => s.clearWaypoints)
   const setBgImage = useSimStore(s => s.setBgImage)
+  const bgImage = useSimStore(s => s.bgImage)
 
   const stlRef = useRef()
-  const svgRef = useRef()
   const bgRef = useRef()
-
   const selected = robots.find(r => r.id === selectedRobotId)
 
   const handleStlImport = (e) => {
     const file = e.target.files[0]
     if (!file || !selected) return
     const reader = new FileReader()
-    reader.onload = (ev) => {
-      setStlData(selected.id, ev.target.result)
-    }
+    reader.onload = ev => setStlData(selected.id, ev.target.result)
     reader.readAsArrayBuffer(file)
-  }
-
-  const handleSvgImport = (e) => {
-    const file = e.target.files[0]
-    if (!file || !selected) return
-    const reader = new FileReader()
-    reader.onload = (ev) => {
-      setSvgData(selected.id, ev.target.result)
-    }
-    reader.readAsText(file)
   }
 
   const handleBgImport = (e) => {
     const file = e.target.files[0]
     if (!file) return
-    const url = URL.createObjectURL(file)
-    setBgImage(url)
-  }
-
-  const cardStyle = {
-    background: 'var(--bg-card)',
-    border: '1px solid var(--border)',
-    borderRadius: 6,
-    padding: '12px 14px',
-    marginBottom: 10,
-  }
-
-  const importBtnStyle = {
-    display: 'flex', alignItems: 'center', gap: 6,
-    padding: '5px 10px',
-    background: 'var(--bg-hover)',
-    border: '1px solid var(--border)',
-    borderRadius: 4,
-    color: 'var(--text-secondary)',
-    fontSize: 11,
-    cursor: 'pointer',
-    fontFamily: 'var(--font-body)',
-    marginBottom: 5,
-    width: '100%',
-    transition: 'all .15s',
+    if (bgImage) URL.revokeObjectURL(bgImage)
+    setBgImage(URL.createObjectURL(file))
+    e.target.value = ''
   }
 
   return (
     <div style={{
-      width: 220,
-      height: '100%',
-      overflowY: 'auto',
-      padding: '12px 10px',
-      borderRight: '1px solid var(--border)',
-      flexShrink: 0,
+      width: 236, height: '100%', overflowY: 'auto', flexShrink: 0,
+      padding: 12, borderRight: '1px solid var(--border)', background: 'var(--bg)',
     }}>
-      {/* Header */}
-      <div style={{ marginBottom: 16, textAlign: 'center' }}>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 13, color: 'var(--accent)', letterSpacing: '.1em', textShadow: '0 0 12px rgba(0,200,255,0.5)' }}>
-          KRABI SIM
-        </div>
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-muted)', marginTop: 2 }}>
-          TABLE 3.0m × 2.0m
-        </div>
-      </div>
-
       {/* Robots */}
-      <div style={cardStyle}>
-        <SectionTitle>Robots</SectionTitle>
+      <Card>
+        <CardTitle>Robots</CardTitle>
+        {robots.length === 0 && (
+          <p style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 8 }}>
+            Ajoutez un robot pour commencer.
+          </p>
+        )}
         {robots.map(r => (
-          <RobotRow
-            key={r.id}
-            robot={r}
-            selected={r.id === selectedRobotId}
-            onSelect={() => selectRobot(r.id)}
-            onRemove={() => removeRobot(r.id)}
-          />
+          <RobotRow key={r.id} robot={r} selected={r.id === selectedRobotId}
+            onSelect={() => selectRobot(r.id)} onRemove={() => removeRobot(r.id)} />
         ))}
-        <button
-          onClick={() => addRobot()}
-          style={{
-            width: '100%', marginTop: 6,
-            padding: '5px 0',
-            background: 'var(--accent-glow)',
-            border: '1px dashed var(--border-bright)',
-            borderRadius: 4,
-            color: 'var(--accent)',
-            fontFamily: 'var(--font-mono)',
-            fontSize: 11,
-            cursor: 'pointer',
-            transition: 'all .15s',
-          }}
-          onMouseEnter={e => e.target.style.background = 'rgba(0,200,255,0.2)'}
-          onMouseLeave={e => e.target.style.background = 'var(--accent-glow)'}
-        >
-          + Ajouter robot
+        <button onClick={() => addRobot()} style={{
+          width: '100%', marginTop: 8, padding: '7px', borderRadius: 'var(--r)',
+          border: '1.5px dashed var(--border2)', background: 'transparent',
+          color: 'var(--blue)', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+        }}>
+          + Ajouter un robot
         </button>
-      </div>
+      </Card>
 
-      {/* Propriétés robot sélectionné */}
+      {/* Propriétés robot */}
       {selected && (
-        <div style={cardStyle}>
-          <SectionTitle style={{ color: selected.color }}>
-            <span style={{ color: selected.color }}>{selected.name}</span>
-          </SectionTitle>
+        <Card>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <span style={{ width: 12, height: 12, borderRadius: '50%', background: selected.color, display: 'inline-block', flexShrink: 0 }} />
+            <CardTitle style={{ margin: 0 }}>{selected.name}</CardTitle>
+          </div>
 
-          {/* Nom */}
-          <div style={{ marginBottom: 8 }}>
-            <input
-              value={selected.name}
-              onChange={e => updateRobot(selected.id, { name: e.target.value })}
+          <Field label="Nom">
+            <input value={selected.name} onChange={e => updateRobot(selected.id, { name: e.target.value })}
               style={{
-                width: '100%', padding: '4px 8px',
-                background: 'var(--bg-base)',
-                border: `1px solid ${selected.color}44`,
-                borderRadius: 3,
-                color: selected.color,
-                fontFamily: 'var(--font-display)',
-                fontSize: 11,
-              }}
-            />
+                width: '100%', padding: '5px 8px', borderRadius: 'var(--r)',
+                border: '1.5px solid var(--border)', background: 'var(--surface2)',
+                fontSize: 13, color: 'var(--text)',
+              }} />
+          </Field>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <Field label="Délai départ">
+              <NumInput value={selected.startDelay} min={0} max={60} step={0.5} unit="s"
+                onChange={v => updateRobot(selected.id, { startDelay: v })} />
+            </Field>
+            <Field label="Vitesse">
+              <NumInput value={selected.speed} min={0.05} max={2.0} step={0.05} unit="m/s"
+                onChange={v => updateRobot(selected.id, { speed: v })} />
+            </Field>
+            <Field label="Largeur">
+              <NumInput value={selected.width} min={0.05} max={0.5} step={0.01} unit="m"
+                onChange={v => updateRobot(selected.id, { width: v })} />
+            </Field>
+            <Field label="Profondeur">
+              <NumInput value={selected.height} min={0.05} max={0.5} step={0.01} unit="m"
+                onChange={v => updateRobot(selected.id, { height: v })} />
+            </Field>
           </div>
 
-          <NumberInput label="Délai départ" value={selected.startDelay} min={0} max={60} step={0.5} unit="s"
-            onChange={v => updateRobot(selected.id, { startDelay: v })} />
-          <NumberInput label="Vitesse" value={selected.speed} min={0.05} max={2.0} step={0.05} unit="m/s"
-            onChange={v => updateRobot(selected.id, { speed: v })} />
-          <NumberInput label="Largeur" value={selected.width} min={0.05} max={0.5} step={0.01} unit="m"
-            onChange={v => updateRobot(selected.id, { width: v })} />
-          <NumberInput label="Hauteur" value={selected.height} min={0.05} max={0.5} step={0.01} unit="m"
-            onChange={v => updateRobot(selected.id, { height: v })} />
-          <NumberInput label="R. collision" value={selected.radius} min={0.05} max={0.4} step={0.01} unit="m"
-            onChange={v => updateRobot(selected.id, { radius: v })} />
+          <Field label="Rayon de collision">
+            <NumInput value={selected.radius} min={0.05} max={0.4} step={0.01} unit="m"
+              onChange={v => updateRobot(selected.id, { radius: v })} />
+          </Field>
 
-          {/* Import géométrie */}
-          <div style={{ marginTop: 10 }}>
-            <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 6 }}>Import géométrie</div>
+          <div style={{ marginBottom: 8 }}>
+            <Label>Géométrie</Label>
             <input type="file" ref={stlRef} accept=".stl" onChange={handleStlImport} style={{ display: 'none' }} />
-            <button style={importBtnStyle} onClick={() => stlRef.current?.click()}
-              onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--border-bright)'}
-              onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}>
-              <span>◈</span> Importer STL
-              {selected.shapeType === 'stl' && <span style={{ marginLeft: 'auto', color: 'var(--accent2)', fontSize: 10 }}>✓</span>}
-            </button>
-            <input type="file" ref={svgRef} accept=".svg" onChange={handleSvgImport} style={{ display: 'none' }} />
-            <button style={importBtnStyle} onClick={() => svgRef.current?.click()}
-              onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--border-bright)'}
-              onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}>
-              <span>◇</span> Importer SVG
-              {selected.shapeType === 'svg' && <span style={{ marginLeft: 'auto', color: 'var(--accent2)', fontSize: 10 }}>✓</span>}
-            </button>
+            <FlatBtn full onClick={() => stlRef.current?.click()}>
+              📦 Importer STL {selected.shapeType === 'stl' ? '✓' : ''}
+            </FlatBtn>
           </div>
 
-          {/* Effacer trajectoire */}
-          <button
-            onClick={() => clearWaypoints(selected.id)}
-            style={{
-              width: '100%', marginTop: 8,
-              padding: '4px 0',
-              background: 'var(--danger-dim)',
-              border: '1px solid rgba(255,61,90,0.3)',
-              borderRadius: 4,
-              color: 'var(--danger)',
-              fontSize: 11,
-              fontFamily: 'var(--font-body)',
-              cursor: 'pointer',
-            }}
-          >
-            ✕ Effacer trajectoire
-          </button>
-        </div>
+          <FlatBtn full danger onClick={() => clearWaypoints(selected.id)}>
+            🗑 Effacer la trajectoire
+          </FlatBtn>
+        </Card>
       )}
 
-      {/* Image de fond table */}
-      <div style={cardStyle}>
-        <SectionTitle>Table</SectionTitle>
+      {/* Table */}
+      <Card>
+        <CardTitle>Table de jeu</CardTitle>
         <input type="file" ref={bgRef} accept="image/*" onChange={handleBgImport} style={{ display: 'none' }} />
-        <button style={importBtnStyle} onClick={() => bgRef.current?.click()}
-          onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--border-bright)'}
-          onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}>
-          ↑ Image de fond (thème)
-        </button>
-        <div style={{ fontSize: 9, color: 'var(--text-muted)' }}>
-          Farming World 2026 — 3m × 2m
-        </div>
-      </div>
+        <FlatBtn full onClick={() => bgRef.current?.click()}>
+          🖼 {bgImage ? 'Changer l\'image de fond' : 'Ajouter une image de fond'}
+        </FlatBtn>
+        {bgImage && (
+          <FlatBtn full danger style={{ marginTop: 6 }} onClick={() => { URL.revokeObjectURL(bgImage); setBgImage(null) }}>
+            Supprimer l'image
+          </FlatBtn>
+        )}
+        <p style={{ fontSize: 11, color: 'var(--text3)', marginTop: 8 }}>Table 3m × 2m • Scroll pour zoomer</p>
+      </Card>
     </div>
   )
 }

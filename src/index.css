@@ -1,128 +1,52 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg-void: #020608;
-  --bg-base: #060d12;
-  --bg-panel: #0a1520;
-  --bg-card: #0d1e2e;
-  --bg-hover: #112435;
-  --accent: #00c8ff;
-  --accent-dim: #0090bb;
-  --accent-glow: rgba(0,200,255,0.18);
-  --accent2: #0aff9d;
-  --accent2-dim: rgba(10,255,157,0.15);
-  --danger: #ff3d5a;
-  --danger-dim: rgba(255,61,90,0.15);
-  --warn: #ffaa00;
-  --warn-dim: rgba(255,170,0,0.15);
-  --border: rgba(0,200,255,0.12);
-  --border-bright: rgba(0,200,255,0.35);
-  --text-primary: #e8f4f8;
-  --text-secondary: #7aacbe;
-  --text-muted: #3d6878;
-  --grid: rgba(0,200,255,0.04);
-  --font-mono: 'Share Tech Mono', monospace;
-  --font-display: 'Orbitron', sans-serif;
-  --font-body: 'Exo 2', sans-serif;
-  --r: 4px;
-  --r-lg: 8px;
+  --bg:        #f0f2f5;
+  --surface:   #ffffff;
+  --surface2:  #f8f9fb;
+  --border:    #e2e8f0;
+  --border2:   #cbd5e1;
+
+  --text:      #1e293b;
+  --text2:     #475569;
+  --text3:     #94a3b8;
+
+  --blue:      #2563eb;
+  --blue-dim:  #eff6ff;
+  --blue-mid:  #bfdbfe;
+  --green:     #16a34a;
+  --green-dim: #f0fdf4;
+  --red:       #dc2626;
+  --red-dim:   #fef2f2;
+  --orange:    #d97706;
+
+  --r:   6px;
+  --r2: 10px;
+  --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.05);
+  --shadow2: 0 4px 12px rgba(0,0,0,.10);
+
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+  color: var(--text);
 }
 
 html, body, #root {
   width: 100%; height: 100%;
-  background: var(--bg-void);
-  color: var(--text-primary);
-  font-family: var(--font-body);
-  font-size: 13px;
+  background: var(--bg);
   overflow: hidden;
 }
 
-::-webkit-scrollbar { width: 4px; height: 4px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 2px; }
-
 button {
-  font-family: var(--font-body);
+  font-family: inherit;
   cursor: pointer;
   border: none;
   outline: none;
-  transition: all .15s;
 }
-
-input, select {
-  font-family: var(--font-mono);
+input, select, textarea {
+  font-family: inherit;
   outline: none;
-  transition: all .15s;
 }
 
-/* Scanline overlay */
-body::after {
-  content: '';
-  position: fixed; inset: 0;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(0,0,0,0.03) 2px,
-    rgba(0,0,0,0.03) 4px
-  );
-  pointer-events: none;
-  z-index: 9999;
-}
-
-/* Corner bracket decoration */
-.bracket-box {
-  position: relative;
-}
-.bracket-box::before, .bracket-box::after {
-  content: '';
-  position: absolute;
-  width: 10px; height: 10px;
-  border-color: var(--accent);
-  border-style: solid;
-}
-.bracket-box::before { top: 0; left: 0; border-width: 1.5px 0 0 1.5px; }
-.bracket-box::after  { bottom: 0; right: 0; border-width: 0 1.5px 1.5px 0; }
-
-/* Glow text */
-.glow {
-  color: var(--accent);
-  text-shadow: 0 0 8px var(--accent), 0 0 20px rgba(0,200,255,0.4);
-}
-
-/* Tag chip */
-.tag {
-  display: inline-flex; align-items: center; gap: 4px;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  padding: 2px 7px;
-  border-radius: 2px;
-  border: 1px solid var(--border-bright);
-  color: var(--accent);
-  background: var(--accent-glow);
-  letter-spacing: .05em;
-}
-
-/* Pulse dot */
-@keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%       { opacity: .4; transform: scale(.75); }
-}
-.pulse-dot {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: var(--accent2);
-  animation: pulse 1.4s ease-in-out infinite;
-  box-shadow: 0 0 6px var(--accent2);
-}
-
-/* Utility */
-.flex { display: flex; }
-.flex-col { display: flex; flex-direction: column; }
-.items-center { align-items: center; }
-.gap-1 { gap: 4px; }
-.gap-2 { gap: 8px; }
-.gap-3 { gap: 12px; }
-.mt-1 { margin-top: 4px; }
-.mt-2 { margin-top: 8px; }
-.w-full { width: 100%; }
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
