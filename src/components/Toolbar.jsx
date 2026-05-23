@@ -39,33 +39,18 @@ function loadFromFile(file, onLoad, onError) {
 }
 
 function Btn({ active, onClick, children, variant='default', title, small }) {
-  const pad = small ? '5px 11px' : '7px 14px'
-  const fz  = small ? 12 : 13
+  const pad = small ? '5px 10px' : '7px 13px'
+  const fz  = small ? 13 : 14
   const v = {
-    default: {
-      background: active ? 'var(--blue)' : 'var(--surface)',
-      border: `1.5px solid ${active ? 'var(--blue)' : 'var(--border)'}`,
-      color: active ? '#fff' : 'var(--text2)',
-      boxShadow: active ? '0 2px 8px rgba(109,40,217,.30)' : 'var(--shadow-sm)',
-    },
-    green: {
-      background: active ? 'var(--green)' : 'var(--surface)',
-      border: `1.5px solid ${active ? 'var(--green)' : 'var(--border)'}`,
-      color: active ? '#fff' : 'var(--text2)',
-      boxShadow: active ? '0 2px 8px rgba(5,150,105,.25)' : 'var(--shadow-sm)',
-    },
-    ghost: {
-      background: 'var(--surface)',
-      border: '1.5px solid var(--border)',
-      color: 'var(--text2)',
-      boxShadow: 'var(--shadow-sm)',
-    },
+    default: { background:active?'#2563eb':'var(--surface)', border:`1.5px solid ${active?'#2563eb':'var(--border)'}`, color:active?'#fff':'var(--text2)' },
+    green:   { background:active?'#16a34a':'var(--surface)', border:`1.5px solid ${active?'#16a34a':'var(--border)'}`, color:active?'#fff':'var(--text2)' },
+    ghost:   { background:'transparent', border:'1.5px solid var(--border)', color:'var(--text2)' },
   }
   return (
     <button title={title} onClick={onClick} style={{
       display:'inline-flex', alignItems:'center', gap:5,
-      padding:pad, borderRadius:'var(--r)', fontSize:fz, fontWeight:600,
-      cursor:'pointer', whiteSpace:'nowrap', lineHeight:1, transition:'all .15s',
+      padding:pad, borderRadius:'var(--r)', fontSize:fz, fontWeight:500,
+      cursor:'pointer', whiteSpace:'nowrap', lineHeight:1, transition:'all .12s',
       ...(v[variant]||v.default),
     }}>
       {children}
@@ -74,7 +59,7 @@ function Btn({ active, onClick, children, variant='default', title, small }) {
 }
 
 function Sep() {
-  return <div style={{ width:1, height:20, background:'var(--border)', margin:'0 2px', flexShrink:0, borderRadius:2 }} />
+  return <div style={{ width:1, height:24, background:'var(--border)', margin:'0 3px', flexShrink:0 }} />
 }
 
 export default function Toolbar() {
@@ -168,19 +153,12 @@ export default function Toolbar() {
 
   return (
     <div style={{
-      display:'flex', alignItems:'center', gap:7, flexWrap:'wrap',
-      padding:'10px 16px', background:'var(--surface)',
+      display:'flex', alignItems:'center', gap:6, flexWrap:'wrap',
+      padding:'8px 14px', background:'var(--surface)',
       borderBottom:'1px solid var(--border)', flexShrink:0,
-      boxShadow:'0 1px 0 var(--border)',
     }}>
-      <span style={{
-        fontSize:11, fontWeight:800, color:'#fff', letterSpacing:'.04em',
-        whiteSpace:'nowrap', marginRight:4,
-        background:'linear-gradient(135deg, var(--blue) 0%, var(--blue-lite) 100%)',
-        padding:'5px 11px', borderRadius:'var(--r3)',
-        boxShadow:'0 2px 8px rgba(109,40,217,.30)',
-      }}>
-        ◆ PAMIS 2000
+      <span style={{ fontSize:13, fontWeight:800, color:'var(--blue)', letterSpacing:'-.3px', marginRight:4, whiteSpace:'nowrap' }}>
+        TURBO PAMIS SIMULATOR 2000
       </span>
       <Sep />
 
@@ -195,31 +173,27 @@ export default function Toolbar() {
       <Btn variant="ghost" onClick={() => { setSimPlaying(false); setSimTime(0) }}>{t.reset}</Btn>
 
       {/* Timeline */}
-      <div style={{ display:'flex', alignItems:'center', gap:7, flex:1, minWidth:140 }}>
-        <span style={{
-          fontSize:13, fontWeight:700, color:'var(--blue)', minWidth:44,
-          fontVariantNumeric:'tabular-nums', fontFeatureSettings:'"tnum"',
-          background:'var(--blue-dim)', padding:'3px 7px', borderRadius:'var(--r)',
-        }}>
+      <div style={{ display:'flex', alignItems:'center', gap:6, flex:1, minWidth:120 }}>
+        <span style={{ fontSize:13, fontWeight:700, color:'var(--blue)', minWidth:40, fontVariantNumeric:'tabular-nums' }}>
           {simTime.toFixed(1)}s
         </span>
         <input type="range" min={0} max={simMaxTime} step={0.1} value={simTime}
           onMouseDown={()=>setSimPlaying(false)}
           onChange={e=>{ setSimPlaying(false); setSimTime(+e.target.value) }}
           style={{ flex:1, minWidth:60, accentColor:'var(--blue)', cursor:'pointer' }} />
-        <span style={{ fontSize:11, color:'var(--text3)', fontVariantNumeric:'tabular-nums' }}>/{simMaxTime}s</span>
+        <span style={{ fontSize:12, color:'var(--text3)' }}>/{simMaxTime}s</span>
       </div>
 
       <select value={simSpeed} onChange={e=>setSimSpeed(+e.target.value)}
-        style={{ padding:'5px 8px', borderRadius:'var(--r)', border:'1.5px solid var(--border)', background:'var(--surface)', fontSize:12, fontWeight:600, color:'var(--text2)', boxShadow:'var(--shadow-sm)' }}>
+        style={{ padding:'5px 7px', borderRadius:'var(--r)', border:'1.5px solid var(--border)', background:'var(--surface)', fontSize:13 }}>
         {[0.25,0.5,1,2,4].map(v=><option key={v} value={v}>{v}×</option>)}
       </select>
 
-      <div style={{ display:'flex', alignItems:'center', gap:5, background:'var(--surface)', border:'1.5px solid var(--border)', borderRadius:'var(--r)', padding:'3px 8px', boxShadow:'var(--shadow-sm)' }}>
-        <span style={{ fontSize:11, color:'var(--text3)', fontWeight:600 }}>{t.duration}</span>
+      <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+        <span style={{ fontSize:12, color:'var(--text3)' }}>{t.duration}</span>
         <input type="number" min={5} max={120} step={5} value={simMaxTime} onChange={e=>setSimMaxTime(+e.target.value)}
-          style={{ width:44, padding:'2px 4px', borderRadius:4, border:'none', background:'transparent', fontSize:13, fontWeight:600, color:'var(--text)' }} />
-        <span style={{ fontSize:11, color:'var(--text3)' }}>s</span>
+          style={{ width:56, padding:'5px 6px', borderRadius:'var(--r)', border:'1.5px solid var(--border)', background:'var(--surface)', fontSize:13 }} />
+        <span style={{ fontSize:12, color:'var(--text3)' }}>s</span>
       </div>
 
       <Sep />
@@ -233,13 +207,12 @@ export default function Toolbar() {
       </Btn>
 
       {/* Langue */}
-      <div style={{ display:'flex', borderRadius:'var(--r)', overflow:'hidden', border:'1.5px solid var(--border)', flexShrink:0, boxShadow:'var(--shadow-sm)' }}>
+      <div style={{ display:'flex', borderRadius:'var(--r)', overflow:'hidden', border:'1.5px solid var(--border)', flexShrink:0 }}>
         {['fr','en'].map(l => (
           <button key={l} onClick={()=>setLang(l)} style={{
-            padding:'5px 10px', fontSize:11, fontWeight:700, cursor:'pointer', border:'none',
+            padding:'4px 9px', fontSize:12, fontWeight:700, cursor:'pointer', border:'none',
             background: lang===l ? 'var(--blue)' : 'var(--surface)',
             color: lang===l ? '#fff' : 'var(--text3)',
-            letterSpacing:'.04em',
           }}>{l.toUpperCase()}</button>
         ))}
       </div>

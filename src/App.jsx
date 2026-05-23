@@ -33,18 +33,11 @@ export default function App() {
             <div style={{
               position: 'absolute', inset: 0, zIndex: 10, pointerEvents: 'none',
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              gap: 10,
+              gap: 8,
             }}>
-              <div style={{
-                background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(8px)',
-                border: '1px solid rgba(109,40,217,.15)', borderRadius: 16,
-                padding: '20px 32px', textAlign: 'center', boxShadow: '0 8px 32px rgba(109,40,217,.12)',
-              }}>
-                <div style={{ fontSize: 28, marginBottom: 8 }}>◆</div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--blue)', marginBottom: 6 }}>{t.noRobot}</div>
-                <div style={{ fontSize: 12, color: 'var(--text3)', lineHeight: 1.8 }}>
-                  {t.noRobotHint1}<br />{t.noRobotHint2}
-                </div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: '#64748b' }}>{t.noRobot}</div>
+              <div style={{ fontSize: 13, color: '#94a3b8', textAlign: 'center', lineHeight: 1.7 }}>
+                {t.noRobotHint1}<br />{t.noRobotHint2}
               </div>
             </div>
           )}
