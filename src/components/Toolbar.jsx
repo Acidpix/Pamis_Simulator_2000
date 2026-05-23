@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react'
-import { useSimStore, detectCollisions, detectObstacleCollisions, detectBorderCollisions, canUndo, canRedo } from '../store/simStore.js'
+import { useSimStore, detectCollisions, detectObstacleCollisions, detectBorderCollisions, canUndo, canRedo, pushHistory } from '../store/simStore.js'
 import { useT } from '../i18n.js'
+import { importGazeboSDF } from '../utils/importGazeboSDF.js'
 
 const SAVE_VERSION = 2
 
@@ -94,8 +95,9 @@ export default function Toolbar() {
   const undo = useSimStore(s=>s.undo)
   const redo = useSimStore(s=>s.redo)
 
-  const loadRef = useRef()
-  const rafRef  = useRef(null)
+  const loadRef    = useRef()
+  const gazeboRef  = useRef()
+  const rafRef     = useRef(null)
   const lastRef = useRef(null)
   const simTimeRef    = useRef(simTime)
   const simSpeedRef   = useRef(simSpeed)
@@ -223,6 +225,24 @@ export default function Toolbar() {
       <input type="file" accept=".json" ref={loadRef} style={{ display:'none' }}
         onChange={e => { const f=e.target.files[0]; if(!f)return; loadFromFile(f,(r,o,m)=>loadState(r,o,m),msg=>alert(t.errorPrefix+msg)); e.target.value='' }} />
       <Btn variant="ghost" small onClick={()=>loadRef.current?.click()}>{t.open}</Btn>
+
+      <input type="file" accept=".world,.sdf,.xml" ref={gazeboRef} style={{ display:'none' }}
+        onChange={e => {
+          const f = e.target.files[0]; if (!f) return
+          const reader = new FileReader()
+          reader.onload = ev => {
+            try {
+              const { robots: r, obstacles: o } = importGazeboSDF(ev.target.result)
+              pushHistory({ robots, obstacles })
+              loadState(r, o, {})
+            } catch (err) { alert(t.errorPrefix + err.message) }
+          }
+          reader.readAsText(f)
+          e.target.value = ''
+        }} />
+      <Btn variant="ghost" small onClick={()=>gazeboRef.current?.click()} title={t.importGazeboTitle}>
+        {t.importGazebo}
+      </Btn>
 
       <Sep />
 

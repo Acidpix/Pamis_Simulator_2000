@@ -67,7 +67,10 @@ const T = {
     segDistance: 'Distance', segMotion: 'Déplacement',
     segHeading: 'Cap', segTurn: 'Virage', segRotation: 'Rotation',
     segStartAt: 'départ à',
+    importGazebo: '📥 Importer SDF',
+    importGazeboTitle: 'Importer un fichier Gazebo SDF (.world)',
     exportJson: '⬇ Exporter JSON trajectoires',
+    exportGazebo: '⬇ Exporter Gazebo SDF',
     howToUse: 'Comment utiliser',
     howTo: [
       '① Ajoutez un robot (gauche)',
@@ -146,7 +149,10 @@ const T = {
     segDistance: 'Distance', segMotion: 'Motion',
     segHeading: 'Heading', segTurn: 'Turn', segRotation: 'Rotation',
     segStartAt: 'starts at',
+    importGazebo: '📥 Import SDF',
+    importGazeboTitle: 'Import a Gazebo SDF file (.world)',
     exportJson: '⬇ Export trajectory JSON',
+    exportGazebo: '⬇ Export Gazebo SDF',
     howToUse: 'How to use',
     howTo: [
       '① Add a robot (left panel)',

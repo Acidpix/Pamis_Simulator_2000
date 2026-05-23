@@ -1,6 +1,85 @@
 import React, { useMemo, useState } from 'react'
-import { useSimStore, computeSegments } from '../store/simStore.js'
+import { useSimStore, computeSegments, getRobotPose } from '../store/simStore.js'
 import { useT } from '../i18n.js'
+
+const TABLE_W = 3.0
+const TABLE_H = 2.0
+
+function hexToRgb(hex) {
+  const n = parseInt(hex.replace('#',''), 16)
+  return { r: ((n>>16)&255)/255, g: ((n>>8)&255)/255, b: (n&255)/255 }
+}
+
+function generateGazeboSDF(robots, obstacles, simMaxTime, step = 0.1) {
+  const actors = robots.map(robot => {
+    const waypoints = []
+    for (let t = 0; t <= simMaxTime + step/2; t += step) {
+      const ts = Math.min(t, simMaxTime)
+      const pose = getRobotPose(robot, ts)
+      const gx = (pose.x - TABLE_W/2).toFixed(4)
+      const gy = (pose.y - TABLE_H/2).toFixed(4)
+      const yaw = (pose.heading * Math.PI / 180).toFixed(4)
+      waypoints.push(`        <waypoint><time>${ts.toFixed(2)}</time><pose>${gx} ${gy} 0 0 0 ${yaw}</pose></waypoint>`)
+    }
+    const c = hexToRgb(robot.color)
+    return `  <actor name="${robot.name.replace(/\s/g,'_')}">
+    <pose>${(robot.x - TABLE_W/2).toFixed(4)} ${(robot.y - TABLE_H/2).toFixed(4)} 0 0 0 0</pose>
+    <link name="body">
+      <visual name="visual">
+        <geometry><cylinder><radius>${robot.radius.toFixed(4)}</radius><length>0.3</length></cylinder></geometry>
+        <material><ambient>${c.r.toFixed(3)} ${c.g.toFixed(3)} ${c.b.toFixed(3)} 1</ambient></material>
+      </visual>
+    </link>
+    <script>
+      <loop>false</loop>
+      <delay_start>${robot.startDelay ?? 0}</delay_start>
+      <auto_start>true</auto_start>
+      <trajectory id="0" type="walking">
+${waypoints.join('\n')}
+      </trajectory>
+    </script>
+  </actor>`
+  })
+
+  const models = obstacles.map((obs, i) => {
+    const gx = (obs.x - TABLE_W/2).toFixed(4)
+    const gy = (obs.y - TABLE_H/2).toFixed(4)
+    const c = hexToRgb(obs.color || '#888888')
+    const geom = obs.shape === 'circle'
+      ? `<cylinder><radius>${obs.radius.toFixed(4)}</radius><length>0.1</length></cylinder>`
+      : `<box><size>${obs.width.toFixed(4)} ${obs.height.toFixed(4)} 0.1</size></box>`
+    return `  <model name="obstacle_${i+1}">
+    <static>true</static>
+    <pose>${gx} ${gy} 0.05 0 0 0</pose>
+    <link name="link">
+      <visual name="visual">
+        <geometry>${geom}</geometry>
+        <material><ambient>${c.r.toFixed(3)} ${c.g.toFixed(3)} ${c.b.toFixed(3)} ${obs.opacity ?? 1}</ambient></material>
+      </visual>
+      <collision name="collision"><geometry>${geom}</geometry></collision>
+    </link>
+  </model>`
+  })
+
+  return `<?xml version="1.0"?>
+<sdf version="1.6">
+  <world name="pamis_world">
+    <model name="table">
+      <static>true</static>
+      <pose>0 0 -0.005 0 0 0</pose>
+      <link name="surface">
+        <visual name="visual">
+          <geometry><box><size>${TABLE_W} ${TABLE_H} 0.01</size></box></geometry>
+          <material><ambient>0.8 0.8 0.8 1</ambient></material>
+        </visual>
+        <collision name="collision"><geometry><box><size>${TABLE_W} ${TABLE_H} 0.01</size></box></geometry></collision>
+      </link>
+    </model>
+${models.join('\n')}
+${actors.join('\n')}
+  </world>
+</sdf>`
+}
 
 function PauseInput({ value, onChange }) {
   return (
@@ -114,8 +193,16 @@ export default function RightPanel() {
   const obsCollisions  = useSimStore(s=>s.obsCollisions)
   const borderCollisions= useSimStore(s=>s.borderCollisions)
   const obstacles      = useSimStore(s=>s.obstacles)
+  const simMaxTime     = useSimStore(s=>s.simMaxTime)
 
   const allCols = [...collisions, ...obsCollisions, ...borderCollisions]
+
+  const handleExportGazebo = () => {
+    const sdf = generateGazeboSDF(robots, obstacles, simMaxTime)
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(new Blob([sdf], { type: 'application/xml' }))
+    a.download = 'pamis_world.world'; a.click()
+  }
 
   const handleExport = () => {
     const data = robots.map(r=>({
@@ -208,12 +295,20 @@ export default function RightPanel() {
       ))}
 
       {robots.length>0 && (
-        <button onClick={handleExport} style={{
-          width:'100%', padding:11, borderRadius:'var(--r2)',
-          border:'1.5px solid var(--border2)', background:'var(--surface)',
-          color:'var(--text)', fontSize:14, fontWeight:600, cursor:'pointer',
-          boxShadow:'var(--shadow)',
-        }}>{t.exportJson}</button>
+        <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+          <button onClick={handleExport} style={{
+            width:'100%', padding:11, borderRadius:'var(--r2)',
+            border:'1.5px solid var(--border2)', background:'var(--surface)',
+            color:'var(--text)', fontSize:14, fontWeight:600, cursor:'pointer',
+            boxShadow:'var(--shadow)',
+          }}>{t.exportJson}</button>
+          <button onClick={handleExportGazebo} style={{
+            width:'100%', padding:11, borderRadius:'var(--r2)',
+            border:'1.5px solid var(--border2)', background:'var(--surface)',
+            color:'var(--text)', fontSize:14, fontWeight:600, cursor:'pointer',
+            boxShadow:'var(--shadow)',
+          }}>{t.exportGazebo}</button>
+        </div>
       )}
 
       {robots.length===0 && (
