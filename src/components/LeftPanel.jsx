@@ -1,8 +1,20 @@
 import React, { useRef, useState, useCallback } from 'react'
 import { useSimStore, pushHistory } from '../store/simStore.js'
+import { useT } from '../i18n.js'
 
 const mToMm = m => Math.round(m * 1000)
 const mmToM = mm => mm / 1000
+
+// Conversions unités linéaires (stocké en m/s et m/s²)
+const LIN = {
+  'mm/s':  { toDisp: v => Math.round(v*1000),            toStore: v => v/1000,       step: 10,   stepA: 100 },
+  'm/s':   { toDisp: v => Math.round(v*1000)/1000,        toStore: v => v,            step: 0.01, stepA: 0.1 },
+}
+// Conversions unités angulaires (stocké en deg/s et deg/s²)
+const ANG = {
+  '°/s':   { toDisp: v => Math.round(v*10)/10,            toStore: v => v,            step: 5,    stepA: 10  },
+  'rad/s': { toDisp: v => Math.round(v*Math.PI/180*1000)/1000, toStore: v => v*180/Math.PI, step: 0.05, stepA: 0.1 },
+}
 
 // ── Composants UI ──
 function Card({ children, style }) {
@@ -179,6 +191,10 @@ export default function LeftPanel() {
   const sel    = robots.find(r=>r.id===selectedRobotId)
   const selObs = obstacles.find(o=>o.id===selectedObsId)
 
+  const [linUnit, setLinUnit] = useState('mm/s')
+  const [angUnit, setAngUnit] = useState('°/s')
+  const t = useT()
+
   const [panelW, setPanelW] = useState(300)
   const resizing = useRef(false)
   const onResizeStart = useCallback(e => {
@@ -212,8 +228,8 @@ export default function LeftPanel() {
       <div style={{ width:panelW, height:'100%', overflowY:'auto', overflowX:'hidden', padding:10, borderRight:'1px solid var(--border)', background:'var(--bg)' }}>
 
         {/* ── Robots ── */}
-        <Sec title="Robots" badge={robots.length||undefined}>
-          {robots.length===0 && <p style={{ fontSize:12, color:'var(--text3)', marginBottom:8 }}>Ajoutez un robot pour commencer.</p>}
+        <Sec title={t.robots} badge={robots.length||undefined}>
+          {robots.length===0 && <p style={{ fontSize:12, color:'var(--text3)', marginBottom:8 }}>{t.noRobotYet}</p>}
           {robots.map(r=>(
             <RobotRow key={r.id} robot={r} selected={r.id===selectedRobotId}
               onSelect={()=>selectRobot(r.id)} onRemove={()=>{pushHistory({robots,obstacles});removeRobot(r.id)}} />
@@ -222,7 +238,7 @@ export default function LeftPanel() {
             width:'100%', marginTop:6, padding:8, borderRadius:'var(--r)',
             border:'1.5px dashed var(--border2)', background:'transparent',
             color:'var(--blue)', fontSize:13, fontWeight:600, cursor:'pointer',
-          }}>+ Ajouter un robot</button>
+          }}>{t.addRobot}</button>
         </Sec>
 
         {/* ── Propriétés robot ── */}
@@ -236,67 +252,90 @@ export default function LeftPanel() {
             </div>
 
             {/* Dimensions */}
-            <SubSec title="Dimensions">
+            <SubSec title={t.dimensions}>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-                <Field label="Largeur" half>
+                <Field label={t.width} half>
                   <NumInput value={mToMm(sel.width)} min={10} max={500} step={1} unit="mm" onChange={v=>ur({width:mmToM(v)})} />
                 </Field>
-                <Field label="Profondeur" half>
+                <Field label={t.depth} half>
                   <NumInput value={mToMm(sel.height)} min={10} max={500} step={1} unit="mm" onChange={v=>ur({height:mmToM(v)})} />
                 </Field>
               </div>
             </SubSec>
 
             {/* Vitesse & Accélération */}
-            <SubSec title="Vitesse & Accélération">
+            <SubSec title={t.speedAccel}>
+              {/* Sélecteurs d'unités */}
+              <div style={{ display:'flex', gap:6, marginBottom:10 }}>
+                {Object.keys(LIN).map(u=>(
+                  <button key={u} onClick={()=>setLinUnit(u)} style={{
+                    flex:1, padding:'3px 0', borderRadius:'var(--r)', fontSize:11, fontWeight:600, cursor:'pointer',
+                    border:`1.5px solid ${linUnit===u?'var(--blue)':'var(--border)'}`,
+                    background:linUnit===u?'var(--blue-dim)':'var(--surface2)',
+                    color:linUnit===u?'var(--blue)':'var(--text3)',
+                  }}>{u}</button>
+                ))}
+                <div style={{ width:1, background:'var(--border)', margin:'0 2px' }} />
+                {Object.keys(ANG).map(u=>(
+                  <button key={u} onClick={()=>setAngUnit(u)} style={{
+                    flex:1, padding:'3px 0', borderRadius:'var(--r)', fontSize:11, fontWeight:600, cursor:'pointer',
+                    border:`1.5px solid ${angUnit===u?'var(--blue)':'var(--border)'}`,
+                    background:angUnit===u?'var(--blue-dim)':'var(--surface2)',
+                    color:angUnit===u?'var(--blue)':'var(--text3)',
+                  }}>{u}</button>
+                ))}
+              </div>
+
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-                <Field label="Vitesse" half>
-                  <NumInput value={mToMm(sel.speed)} min={1} max={3000} step={10} unit="mm/s" onChange={v=>ur({speed:mmToM(v)})} />
+                <Field label={t.speed} half>
+                  <NumInput value={LIN[linUnit].toDisp(sel.speed)} min={0} max={linUnit==='mm/s'?5000:5}
+                    step={LIN[linUnit].step} unit={linUnit} onChange={v=>ur({speed:LIN[linUnit].toStore(v)})} />
                 </Field>
-                <Field label="Accélération" half>
-                  <NumInput value={Math.round((sel.accel??1)*1000)} min={100} max={10000} step={100} unit="mm/s²" onChange={v=>ur({accel:v/1000})} />
+                <Field label={t.accel} half>
+                  <NumInput value={LIN[linUnit].toDisp(sel.accel??1)} min={0} max={linUnit==='mm/s'?20000:20}
+                    step={LIN[linUnit].stepA} unit={linUnit.replace('/s','/s²')} onChange={v=>ur({accel:LIN[linUnit].toStore(v)})} />
+                </Field>
+                <Field label={t.rotSpeed} half>
+                  <NumInput value={ANG[angUnit].toDisp(sel.rotSpeed??90)} min={0} max={angUnit==='°/s'?1080:6}
+                    step={ANG[angUnit].step} unit={angUnit} onChange={v=>ur({rotSpeed:ANG[angUnit].toStore(v)})} />
+                </Field>
+                <Field label={t.rotAccel} half>
+                  <NumInput value={ANG[angUnit].toDisp(sel.rotAccel??360)} min={0} max={angUnit==='°/s'?7200:40}
+                    step={ANG[angUnit].stepA} unit={angUnit.replace('/s','/s²')} onChange={v=>ur({rotAccel:ANG[angUnit].toStore(v)})} />
                 </Field>
               </div>
             </SubSec>
 
             {/* Déplacement */}
-            <SubSec title="Déplacement">
-              <Field label="Délai de départ">
+            <SubSec title={t.motion}>
+              <Field label={t.startDelay}>
                 <NumInput value={sel.startDelay} min={0} max={60} step={0.5} unit="s" onChange={v=>ur({startDelay:v})} />
               </Field>
-              <Field label="Mode">
+              <Field label={t.mode}>
                 <ShapeToggle value={sel.waypointMode??'stop'}
-                  options={[{v:'stop',label:'⏸ Stop aux pts'},{v:'continuous',label:'→ Continu'}]}
+                  options={[{v:'stop',label:t.stopMode},{v:'continuous',label:t.contMode}]}
                   onChange={v=>ur({waypointMode:v})} />
               </Field>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-                <Field label="Vit. rotation" half>
-                  <NumInput value={sel.rotSpeed??90} min={5} max={720} step={5} unit="°/s" onChange={v=>ur({rotSpeed:v})} />
-                </Field>
-                <Field label="Acc. rotation" half>
-                  <NumInput value={sel.rotAccel??360} min={10} max={3600} step={10} unit="°/s²" onChange={v=>ur({rotAccel:v})} />
-                </Field>
-              </div>
             </SubSec>
 
             {/* Collision */}
-            <SubSec title="Collision">
-              <Field label="Forme de collision">
+            <SubSec title={t.collision}>
+              <Field label={t.collShape}>
                 <ShapeToggle value={sel.collisionShape??'circle'}
-                  options={[{v:'circle',label:'○ Cercle'},{v:'rect',label:'▭ Rect'}]}
+                  options={[{v:'circle',label:t.circleLabel},{v:'rect',label:t.rectLabel}]}
                   onChange={v=>ur({collisionShape:v})} />
               </Field>
-              <Field label="Rayon de collision">
+              <Field label={t.collRadius}>
                 <NumInput value={mToMm(sel.radius)} min={10} max={400} step={1} unit="mm" onChange={v=>ur({radius:mmToM(v)})} />
               </Field>
             </SubSec>
 
             {/* Apparence */}
-            <SubSec title="Apparence">
-              <Field label={`Transparence  ${Math.round((1-(sel.opacity??1))*100)}%`}>
+            <SubSec title={t.appearance}>
+              <Field label={`${t.opacity}  ${Math.round((1-(sel.opacity??1))*100)}%`}>
                 <Slider value={1-(sel.opacity??1)} min={0} max={0.95} step={0.05} onChange={v=>ur({opacity:1-v})} />
               </Field>
-              <Field label={`Orientation de départ  ${Math.round(norm360(sel.heading))}°`}>
+              <Field label={`${t.startHeading}  ${Math.round(norm360(sel.heading))}°`}>
                 <input type="range" min={0} max={359} step={1} value={norm360(sel.heading)}
                   onChange={e=>ur({heading:+e.target.value})}
                   style={{ width:'100%', accentColor:'var(--blue)' }} />
@@ -304,14 +343,14 @@ export default function LeftPanel() {
             </SubSec>
 
             {/* STL */}
-            <SubSec title="Géométrie STL" defaultOpen={false}>
+            <SubSec title={t.stlGeometry} defaultOpen={false}>
               <input type="file" ref={stlRef} accept=".stl" onChange={handleStlImport} style={{ display:'none' }} />
-              <FlatBtn full onClick={()=>stlRef.current?.click()} sx={{ marginBottom:8 }}>
-                📦 {sel.hasStl?'✓ STL importé — changer':'Importer fichier STL'}
+              <FlatBtn full onClick={()=>stlRef.current?.click()}>
+                📦 {sel.hasStl ? t.stlImported : t.stlImport}
               </FlatBtn>
               {sel.hasStl && (
                 <div style={{ marginTop:8 }}>
-                  <Label>Rotation STL</Label>
+                  <Label>{t.stlRotation}</Label>
                   {[['X', sel.stlRotX??-90], ['Y', sel.stlRotY??0], ['Z', sel.stlRotZ??0]].map(([ax,val])=>(
                     <div key={ax} style={{ display:'flex', alignItems:'center', gap:6, marginBottom:6 }}>
                       <span style={{ fontSize:12, fontWeight:600, color:'var(--text3)', width:14, flexShrink:0 }}>{ax}</span>
@@ -325,21 +364,21 @@ export default function LeftPanel() {
             </SubSec>
 
             <FlatBtn full danger onClick={()=>{pushHistory({robots,obstacles});clearWaypoints(sel.id)}}>
-              🗑 Effacer la trajectoire
+              {t.clearTrajectory}
             </FlatBtn>
           </Sec>
         )}
 
         {/* ── Obstacles ── */}
-        <Sec title="Obstacles" defaultOpen={false} badge={obstacles.length||undefined}>
-          {obstacles.length===0 && <p style={{ fontSize:12, color:'var(--text3)', marginBottom:8 }}>Ajoutez des obstacles statiques (détection de collision).</p>}
+        <Sec title={t.obstacles} defaultOpen={false} badge={obstacles.length||undefined}>
+          {obstacles.length===0 && <p style={{ fontSize:12, color:'var(--text3)', marginBottom:8 }}>{t.noObstacleYet}</p>}
           {obstacles.map(o=>(
             <ObsRow key={o.id} obs={o} selected={o.id===selectedObsId}
               onSelect={()=>selectObstacle(o.id)} onRemove={()=>removeObstacle(o.id)} />
           ))}
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6, marginTop:6 }}>
-            <button onClick={()=>addObstacle({shape:'rect',collisionShape:'rect'})} style={{ padding:7, borderRadius:'var(--r)', border:'1.5px dashed var(--border2)', background:'transparent', color:'var(--text2)', fontSize:12, fontWeight:500, cursor:'pointer' }}>+ Rectangle</button>
-            <button onClick={()=>addObstacle({shape:'circle',collisionShape:'circle'})} style={{ padding:7, borderRadius:'var(--r)', border:'1.5px dashed var(--border2)', background:'transparent', color:'var(--text2)', fontSize:12, fontWeight:500, cursor:'pointer' }}>+ Cercle</button>
+            <button onClick={()=>addObstacle({shape:'rect',collisionShape:'rect'})} style={{ padding:7, borderRadius:'var(--r)', border:'1.5px dashed var(--border2)', background:'transparent', color:'var(--text2)', fontSize:12, fontWeight:500, cursor:'pointer' }}>{t.addRect}</button>
+            <button onClick={()=>addObstacle({shape:'circle',collisionShape:'circle'})} style={{ padding:7, borderRadius:'var(--r)', border:'1.5px dashed var(--border2)', background:'transparent', color:'var(--text2)', fontSize:12, fontWeight:500, cursor:'pointer' }}>{t.addCircle}</button>
           </div>
         </Sec>
 
@@ -351,61 +390,61 @@ export default function LeftPanel() {
               <input value={selObs.name} onChange={e=>uo({name:e.target.value})}
                 style={{ flex:1, padding:'5px 7px', borderRadius:'var(--r)', border:'1.5px solid var(--border)', fontSize:13, fontWeight:600, minWidth:0 }} />
             </div>
-            <Field label="Forme visuelle">
+            <Field label={t.visualShape}>
               <ShapeToggle value={selObs.shape}
-                options={[{v:'rect',label:'▭ Rectangle'},{v:'circle',label:'○ Cercle'}]}
+                options={[{v:'rect',label:t.rectLabel2},{v:'circle',label:t.circleLabel2}]}
                 onChange={v=>uo({shape:v})} />
             </Field>
-            <Field label="Forme de collision">
+            <Field label={t.collShape}>
               <ShapeToggle value={selObs.collisionShape??'rect'}
-                options={[{v:'rect',label:'▭ Rect'},{v:'circle',label:'○ Cercle'}]}
+                options={[{v:'rect',label:t.rectLabel},{v:'circle',label:t.circleLabel}]}
                 onChange={v=>uo({collisionShape:v})} />
             </Field>
             {selObs.shape==='rect' ? (
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-                <Field label="Largeur" half>
+                <Field label={t.width} half>
                   <NumInput value={mToMm(selObs.width)} min={10} max={2000} step={1} unit="mm" onChange={v=>uo({width:mmToM(v),radius:mmToM(v)/2/1000})} />
                 </Field>
-                <Field label="Profondeur" half>
+                <Field label={t.depth} half>
                   <NumInput value={mToMm(selObs.height)} min={10} max={2000} step={1} unit="mm" onChange={v=>uo({height:mmToM(v)})} />
                 </Field>
               </div>
             ) : (
-              <Field label="Rayon">
+              <Field label={t.radius}>
                 <NumInput value={mToMm(selObs.radius)} min={10} max={1000} step={1} unit="mm" onChange={v=>uo({radius:mmToM(v),width:mmToM(v)*2,height:mmToM(v)*2})} />
               </Field>
             )}
-            <Field label={`Transparence  ${Math.round((1-(selObs.opacity??1))*100)}%`}>
+            <Field label={`${t.opacity}  ${Math.round((1-(selObs.opacity??1))*100)}%`}>
               <Slider value={1-(selObs.opacity??1)} min={0} max={0.95} step={0.05} onChange={v=>uo({opacity:1-v})} />
             </Field>
           </Sec>
         )}
 
         {/* ── Table & Grille ── */}
-        <Sec title="Table & Grille" defaultOpen={false}>
+        <Sec title={t.tableGrid} defaultOpen={false}>
           <input type="file" ref={bgRef} accept="image/*" onChange={handleBgImport} style={{ display:'none' }} />
           <FlatBtn full onClick={()=>bgRef.current?.click()} style={{ marginBottom:6 }}>
-            🖼 {bgImage?"Changer l'image de fond":'Ajouter image de fond'}
+            🖼 {bgImage ? t.changeBgImage : t.addBgImage}
           </FlatBtn>
-          {bgImage && <FlatBtn full danger style={{ marginBottom:8 }} onClick={()=>{if(bgImage?.startsWith('blob:'))URL.revokeObjectURL(bgImage);setBgImage(null)}}>Supprimer l'image</FlatBtn>}
+          {bgImage && <FlatBtn full danger style={{ marginBottom:8 }} onClick={()=>{if(bgImage?.startsWith('blob:'))URL.revokeObjectURL(bgImage);setBgImage(null)}}>{t.removeBgImage}</FlatBtn>}
 
-          <Field label="Surface de la table">
+          <Field label={t.tableSurface}>
             <div style={{ display:'flex', alignItems:'center', gap:8 }}>
               <ColorSwatch value={viewportColor||'#2d6e3e'} onChange={setViewportColor} />
               <span style={{ fontSize:12, color:'var(--text3)' }}>{viewportColor||'#2d6e3e'}</span>
             </div>
           </Field>
 
-          <Field label="Arrière-plan (hors table)">
+          <Field label={t.canvasBg}>
             <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-              <ColorSwatch value={canvasBgColor||'#dde3ec'} onChange={setCanvasBgColor} />
-              <span style={{ fontSize:12, color:'var(--text3)' }}>{canvasBgColor||'#dde3ec'}</span>
+              <ColorSwatch value={canvasBgColor||'#2e4a76'} onChange={setCanvasBgColor} />
+              <span style={{ fontSize:12, color:'var(--text3)' }}>{canvasBgColor||'#2e4a76'}</span>
             </div>
           </Field>
 
-          <Toggle value={showGrid} onChange={setShowGrid} label="Afficher la grille" />
+          <Toggle value={showGrid} onChange={setShowGrid} label={t.showGrid} />
 
-          <Field label="Couleur de la grille">
+          <Field label={t.gridColor}>
             <div style={{ display:'flex', alignItems:'center', gap:8 }}>
               <ColorSwatch value={gridColor} onChange={setGridColor} />
               <span style={{ fontSize:12, color:'var(--text3)' }}>{gridColor}</span>
@@ -413,14 +452,14 @@ export default function LeftPanel() {
           </Field>
 
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-            <Field label="Petite grille" half>
+            <Field label={t.minorGrid} half>
               <NumInput value={gridMinorStep} min={0} max={100} step={5} unit="cm" onChange={setGridMinorStep} />
             </Field>
-            <Field label="Grande grille" half>
+            <Field label={t.majorGrid} half>
               <NumInput value={gridMajorStep} min={0} max={200} step={10} unit="cm" onChange={setGridMajorStep} />
             </Field>
           </div>
-          <p style={{ fontSize:11, color:'var(--text3)', marginTop:4 }}>300×200cm • Ctrl+drag = snap 15°</p>
+          <p style={{ fontSize:11, color:'var(--text3)', marginTop:4 }}>{t.hint}</p>
         </Sec>
       </div>
 

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react'
 import { useSimStore, detectCollisions, detectObstacleCollisions, detectBorderCollisions, canUndo, canRedo } from '../store/simStore.js'
+import { useT } from '../i18n.js'
 
 const SAVE_VERSION = 2
 
@@ -77,6 +78,8 @@ export default function Toolbar() {
   const setViewMode  = useSimStore(s=>s.setViewMode)
   const darkMode     = useSimStore(s=>s.darkMode)
   const setDarkMode  = useSimStore(s=>s.setDarkMode)
+  const lang         = useSimStore(s=>s.lang)
+  const setLang      = useSimStore(s=>s.setLang)
   const robots       = useSimStore(s=>s.robots)
   const obstacles    = useSimStore(s=>s.obstacles)
   const setCollisions= useSimStore(s=>s.setCollisions)
@@ -144,7 +147,7 @@ export default function Toolbar() {
     setBorderCollisions(robots.length>0 ? detectBorderCollisions(robots, tableW, tableH, simMaxTime) : [])
   }, [robots, obstacles, simMaxTime, tableW, tableH])
 
-  const pct = simMaxTime > 0 ? (simTime/simMaxTime)*100 : 0
+  const t = useT()
 
   return (
     <div style={{
@@ -157,15 +160,15 @@ export default function Toolbar() {
       </span>
       <Sep />
 
-      <Btn active={mode==='draw'}  onClick={()=>setMode('draw')}  title="Cliquer la table pour ajouter des waypoints">✏️ Tracer</Btn>
-      <Btn active={mode==='move'}  onClick={()=>setMode('move')}  title="Glisser robots et obstacles">✋ Déplacer</Btn>
+      <Btn active={mode==='draw'} onClick={()=>setMode('draw')} title={t.drawTitle}>{t.draw}</Btn>
+      <Btn active={mode==='move'} onClick={()=>setMode('move')} title={t.moveTitle}>{t.move}</Btn>
 
       <Sep />
 
       <Btn variant="green" active={simPlaying} onClick={() => { if(simTime>=simMaxTime) setSimTime(0); setSimPlaying(!simPlaying) }}>
-        {simPlaying ? '⏸ Pause' : '▶ Simuler'}
+        {simPlaying ? t.pause : t.play}
       </Btn>
-      <Btn variant="ghost" onClick={() => { setSimPlaying(false); setSimTime(0) }}>⏮ Reset</Btn>
+      <Btn variant="ghost" onClick={() => { setSimPlaying(false); setSimTime(0) }}>{t.reset}</Btn>
 
       {/* Timeline */}
       <div style={{ display:'flex', alignItems:'center', gap:6, flex:1, minWidth:120 }}>
@@ -185,7 +188,7 @@ export default function Toolbar() {
       </select>
 
       <div style={{ display:'flex', alignItems:'center', gap:4 }}>
-        <span style={{ fontSize:12, color:'var(--text3)' }}>Durée</span>
+        <span style={{ fontSize:12, color:'var(--text3)' }}>{t.duration}</span>
         <input type="number" min={5} max={120} step={5} value={simMaxTime} onChange={e=>setSimMaxTime(+e.target.value)}
           style={{ width:56, padding:'5px 6px', borderRadius:'var(--r)', border:'1.5px solid var(--border)', background:'var(--surface)', fontSize:13 }} />
         <span style={{ fontSize:12, color:'var(--text3)' }}>s</span>
@@ -193,27 +196,38 @@ export default function Toolbar() {
 
       <Sep />
 
-      <Btn active={showGrid} onClick={()=>setShowGrid(!showGrid)} small>⊞ Grille</Btn>
+      <Btn active={showGrid} onClick={()=>setShowGrid(!showGrid)} small>{t.grid}</Btn>
       <Btn active={viewMode==='3d'} onClick={()=>setViewMode(viewMode==='2d'?'3d':'2d')} small>
-        {viewMode==='3d'?'🗺 2D':'🧊 3D'}
+        {viewMode==='3d' ? t.view2d : t.view3d}
       </Btn>
-      <Btn active={darkMode} onClick={()=>setDarkMode(!darkMode)} small title="Mode sombre">
+      <Btn active={darkMode} onClick={()=>setDarkMode(!darkMode)} small>
         {darkMode ? '☀️' : '🌙'}
       </Btn>
+
+      {/* Langue */}
+      <div style={{ display:'flex', borderRadius:'var(--r)', overflow:'hidden', border:'1.5px solid var(--border)', flexShrink:0 }}>
+        {['fr','en'].map(l => (
+          <button key={l} onClick={()=>setLang(l)} style={{
+            padding:'4px 9px', fontSize:12, fontWeight:700, cursor:'pointer', border:'none',
+            background: lang===l ? 'var(--blue)' : 'var(--surface)',
+            color: lang===l ? '#fff' : 'var(--text3)',
+          }}>{l.toUpperCase()}</button>
+        ))}
+      </div>
 
       <Sep />
 
       <Btn variant="ghost" small onClick={()=>saveToFile(robots, obstacles, { simMaxTime, simSpeed, gridColor, gridMinorStep, gridMajorStep, viewportColor, canvasBgColor })}>
-        💾 Sauvegarder
+        {t.save}
       </Btn>
       <input type="file" accept=".json" ref={loadRef} style={{ display:'none' }}
-        onChange={e => { const f=e.target.files[0]; if(!f)return; loadFromFile(f,(r,o,m)=>loadState(r,o,m),msg=>alert('Erreur : '+msg)); e.target.value='' }} />
-      <Btn variant="ghost" small onClick={()=>loadRef.current?.click()}>📂 Ouvrir</Btn>
+        onChange={e => { const f=e.target.files[0]; if(!f)return; loadFromFile(f,(r,o,m)=>loadState(r,o,m),msg=>alert(t.errorPrefix+msg)); e.target.value='' }} />
+      <Btn variant="ghost" small onClick={()=>loadRef.current?.click()}>{t.open}</Btn>
 
       <Sep />
 
-      <Btn variant="ghost" small onClick={undo} title="Annuler (Ctrl+Z)">↩ Annuler</Btn>
-      <Btn variant="ghost" small onClick={redo} title="Rétablir (Ctrl+Y)">↪ Rétablir</Btn>
+      <Btn variant="ghost" small onClick={undo} title={t.undoTitle}>{t.undo}</Btn>
+      <Btn variant="ghost" small onClick={redo} title={t.redoTitle}>{t.redo}</Btn>
     </div>
   )
 }

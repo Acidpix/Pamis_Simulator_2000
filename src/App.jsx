@@ -4,6 +4,7 @@ import LeftPanel from './components/LeftPanel.jsx'
 import RightPanel from './components/RightPanel.jsx'
 import Toolbar from './components/Toolbar.jsx'
 import { useSimStore, pushHistory } from './store/simStore.js'
+import { useT } from './i18n.js'
 
 export default function App() {
   const selectedRobotId = useSimStore(s => s.selectedRobotId)
@@ -12,6 +13,7 @@ export default function App() {
   const robots = useSimStore(s => s.robots)
   const mode = useSimStore(s => s.mode)
   const canvasBgColor = useSimStore(s => s.canvasBgColor)
+  const t = useT()
 
   const handleTableClick = useCallback((tx, ty) => {
     if (mode !== 'draw') return
@@ -33,10 +35,9 @@ export default function App() {
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
               gap: 8,
             }}>
-              <div style={{ fontSize: 16, fontWeight: 600, color: '#64748b' }}>Aucun robot</div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: '#64748b' }}>{t.noRobot}</div>
               <div style={{ fontSize: 13, color: '#94a3b8', textAlign: 'center', lineHeight: 1.7 }}>
-                Ajoutez un robot depuis le panneau gauche<br />
-                puis cliquez sur la table pour tracer sa trajectoire
+                {t.noRobotHint1}<br />{t.noRobotHint2}
               </div>
             </div>
           )}

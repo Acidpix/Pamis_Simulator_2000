@@ -281,9 +281,10 @@ export const useSimStore = create(immer((set, get) => ({
 
   tableW: 3.0, tableH: 2.0,
   showGrid: true, gridColor: '#ffffff', gridMinorStep: 10, gridMajorStep: 50,
-  bgImage: null, viewMode: '2d', darkMode: false,
+  bgImage: '/table_FINALE_1.jpg', viewMode: '2d', darkMode: false,
   viewportColor: '#2d6e3e',
-  canvasBgColor: '#dde3ec',
+  canvasBgColor: '#2e4a76',
+  lang: 'fr',
   setBgImage:       u => set(s => { s.bgImage=u }),
   setShowGrid:      v => set(s => { s.showGrid=v }),
   setGridColor:     v => set(s => { s.gridColor=v }),
@@ -293,6 +294,7 @@ export const useSimStore = create(immer((set, get) => ({
   setDarkMode:       v => set(s => { s.darkMode=v }),
   setViewportColor:  v => set(s => { s.viewportColor=v }),
   setCanvasBgColor:  v => set(s => { s.canvasBgColor=v }),
+  setLang:           v => set(s => { s.lang=v }),
 
   collisions: [], obsCollisions: [], borderCollisions: [],
   setCollisions:       c => set(s => { s.collisions=c }),

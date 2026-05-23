@@ -1,96 +1,112 @@
-# PAMIS SIMULATOR 2000 🤖
+# TURBO PAMIS SIMULATOR 2000
 
-Simulateur de trajectoires pour la **Coupe de France de Robotique** — équipe Krabi Robotics.
+Simulateur de trajectoires de robots pour la **Coupe de France de Robotique**.  
+Permet de planifier, visualiser et exporter les trajectoires de plusieurs robots sur une table 3×2 m.
 
-## Stack technique
-- **React 18** + **Vite 5**
-- **Three.js** + **@react-three/fiber** + **@react-three/drei** — rendu 3D/2D de la table
-- **Zustand** + **Immer** — gestion d'état
-- **STLLoader** (Three.js) — import modèles 3D robots
+---
 
-## Installation
+## Fonctionnalités / Features
+
+### Robots
+- Ajout de plusieurs robots — couleur, nom, dimensions / Add multiple robots — color, name, dimensions
+- Tracé de trajectoire par clic (mode **Tracer** / **Draw**)
+- Déplacement de robots et waypoints par glisser-déposer (mode **Déplacer** / **Move**)
+- Snap angulaire à 15° en maintenant **Ctrl** lors du déplacement d'un waypoint
+
+### Cinématique / Kinematics
+- Profil de vitesse **trapézoïdal** (accél. / décél.) — mode *Stop aux waypoints*
+- Mode **Continu** (vitesse constante entre waypoints)
+- Vitesse et accélération **linéaires** indépendantes (mm/s ou m/s)
+- Vitesse et accélération **angulaires** indépendantes (°/s ou rad/s)
+- **Pause** configurable à chaque waypoint (panneau droit)
+- Délai de départ par robot
+
+### Détection de collisions / Collision detection
+- Robot ↔ Robot
+- Robot ↔ Obstacle statique
+- Robot ↔ Bord de table (15 mm × 70 mm)
+- Formes de collision : **cercle** ou **rectangle** (indépendant par entité)
+
+### Obstacles statiques / Static obstacles
+- Rectangle ou cercle, couleur, dimensions, transparence, forme de collision
+
+### Simulation
+- Timeline slider + vitesse de lecture ×0.25 à ×4
+- Durée de simulation configurable (5–120 s)
+- Vue **2D** (orthographique) et **3D** (perspective + OrbitControls)
+
+### Table & Affichage / Table & Display
+- Image de fond par défaut : `public/table_FINALE_1.jpg`
+- Couleur de surface de la table configurable
+- Couleur d'arrière-plan (hors table) configurable
+- Grille configurable (couleur, pas petite / grande grille)
+- Mode **sombre / clair**
+- Langue **FR / EN**
+
+### Import STL
+- Import de géométrie 3D `.stl` avec contrôle de rotation X / Y / Z
+
+### Sauvegarde / Save & Export
+- **Sauvegarder** : JSON complet (robots, obstacles, configuration)
+- **Ouvrir** : import d'une sauvegarde JSON
+- **Exporter trajectoires** : JSON des segments (pour intégration embarquée)
+- Annuler / Rétablir — Ctrl+Z / Ctrl+Y (60 niveaux)
+
+---
+
+## Installation (production)
 
 ```bash
-# Dans votre VM Linux
-node --version   # Nécessite Node.js >= 18
+bash install.sh
+```
 
-cd robot-sim
+Le script :
+1. Clone le dépôt depuis `https://github.com/Acidpix/Pamis_Simulator_2000.git`
+2. Installe Node.js 20 LTS si absent
+3. Build (`npm run build`)
+4. Crée et active un service **systemd** `pamis-simulator-2000` (port 3000)
+
+---
+
+## Développement / Development
+
+```bash
 npm install
 npm run dev
 ```
 
-Ouvrez ensuite : **http://localhost:5173**
+---
 
-> Sur une VM, accédez depuis l'hôte via l'IP de la VM : `http://192.168.x.x:5173`
+## Stack technique
 
-## Fonctionnalités
+| Outil | Rôle |
+|---|---|
+| React 18 + Vite 5 | SPA + bundler |
+| Zustand + Immer | État global |
+| @react-three/fiber | Rendu 3D WebGL |
+| @react-three/drei | Caméra, contrôles, textures |
+| Three.js STLLoader | Import géométrie STL |
 
-### Table
-- Dimensions réelles **3m × 2m** — grille 10cm / 50cm
-- Import d'une **image de fond** (thème Farming World 2026)
-- Scroll molette pour **zoomer**
+---
 
-### Robots
-- Ajout de **plusieurs robots** avec couleurs distinctes
-- **Drag & drop** pour repositionner (mode Déplacer)
-- Import de géométrie **STL** (modèle 3D CAO) ou **SVG** (empreinte 2D)
-- Paramètres : nom, délai de départ, vitesse, dimensions, rayon de collision
-
-### Trajectoires
-- Cliquez sur la table en mode **Tracer** pour ajouter des waypoints
-- Visualisation des **flèches de direction** sur chaque segment
-- Pour chaque segment : **distance (mm)**, **cap absolu (°)**, **rotation relative (°)**, temps de départ, durée
-
-### Simulation
-- **Lecture / pause** avec curseur temporel
-- Vitesses de simulation : ×0.25 à ×4
-- **Détection de collisions** en temps réel (cercles de collision)
-- Marqueurs visuels rouges aux points de collision
-
-### Export
-- **Export JSON** des trajectoires avec toutes les données métriques
-  (distances mm, angles, timings) prêtes à transposer dans les robots
-
-## Format JSON exporté
+## Format de sauvegarde JSON
 
 ```json
-[
-  {
-    "name": "Robot 1",
-    "startPosition": { "x": 1.5, "y": 1.0 },
-    "startDelay": 0,
-    "speed": 0.3,
-    "segments": [
-      {
-        "from": { "x": 1500, "y": 1000 },
-        "to":   { "x": 2000, "y": 1000 },
-        "distance_mm": 500,
-        "heading_deg": 0,
-        "rotation_deg": null,
-        "start_time_s": 0,
-        "duration_s": 1.67
-      }
-    ]
-  }
-]
+{
+  "version": 2,
+  "meta": { "simMaxTime": 30, "simSpeed": 1, "viewportColor": "#2d6e3e", "canvasBgColor": "#2e4a76" },
+  "robots": [{
+    "id": "r_...", "name": "Robot 1", "color": "#e03131",
+    "x": 0.5, "y": 0.3, "heading": 0,
+    "speed": 0.3, "accel": 1.0, "rotSpeed": 90, "rotAccel": 360,
+    "waypointMode": "stop", "collisionShape": "circle",
+    "width": 0.2, "height": 0.2, "radius": 0.14, "opacity": 1.0,
+    "startDelay": 0, "waypoints": [{ "x": 1.0, "y": 1.0, "pause": 0 }]
+  }],
+  "obstacles": []
+}
 ```
 
-## Structure du projet
+---
 
-```
-robot-sim/
-├── src/
-│   ├── components/
-│   │   ├── SimCanvas.jsx    # Scène Three.js (table, robots, trajectoires)
-│   │   ├── LeftPanel.jsx    # Gestion robots + import STL/SVG
-│   │   ├── RightPanel.jsx   # Segments, angles, collisions, export
-│   │   └── Toolbar.jsx      # Modes + contrôles simulation
-│   ├── store/
-│   │   └── simStore.js      # État Zustand + cinématique + détection collision
-│   ├── App.jsx
-│   ├── main.jsx
-│   └── index.css
-├── index.html
-├── vite.config.js
-└── package.json
-```
+[https://github.com/Acidpix/Pamis_Simulator_2000](https://github.com/Acidpix/Pamis_Simulator_2000)
