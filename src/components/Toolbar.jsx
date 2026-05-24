@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react'
-import { useSimStore, canUndo, canRedo, pushHistory } from '../store/simStore.js'
+import { useSimStore, pushHistory } from '../store/simStore.js'
 import { useT } from '../i18n.js'
 import { importGazeboSDF } from '../utils/importGazeboSDF.js'
 
@@ -7,9 +7,7 @@ const SAVE_VERSION = 2
 
 function saveToFile(robots, obstacles, meta) {
   const payload = {
-    version: SAVE_VERSION,
-    savedAt: new Date().toISOString(),
-    meta,
+    version: SAVE_VERSION, savedAt: new Date().toISOString(), meta,
     robots: robots.map(r => ({
       id:r.id, name:r.name, color:r.color,
       x:r.x, y:r.y, heading:r.heading,
@@ -38,36 +36,26 @@ function loadFromFile(file, onLoad, onError) {
   reader.readAsText(file)
 }
 
-/* ── Bouton toolbar ── */
-function TBtn({ active, onClick, children, title, accent, danger }) {
+function TBtn({ active, onClick, children, title, accent }) {
   const base = {
-    display: 'inline-flex', alignItems: 'center', gap: 5,
-    padding: '6px 11px', borderRadius: 'var(--r)', fontSize: 13,
-    fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
-    lineHeight: 1, transition: 'all .12s', height: 32,
+    display: 'inline-flex', alignItems: 'center', gap: 4,
+    padding: '0 12px', height: 32, borderRadius: 'var(--r)',
+    fontSize: 13, fontWeight: 600, cursor: 'pointer',
+    whiteSpace: 'nowrap', lineHeight: 1, transition: 'all .12s', flexShrink: 0,
   }
-  let style = { ...base }
   if (active && accent) {
-    style = { ...base, background: 'var(--accent)', border: '1px solid var(--accent-dark)', color: '#fff', boxShadow: '0 2px 8px var(--accent-mid)' }
-  } else if (active) {
-    style = { ...base, background: 'var(--surface3)', border: '1px solid var(--border2)', color: 'var(--text)' }
-  } else if (danger) {
-    style = { ...base, background: 'transparent', border: '1px solid var(--border)', color: 'var(--red)' }
-  } else {
-    style = { ...base, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text2)' }
+    return <button title={title} onClick={onClick} style={{ ...base, background: 'var(--accent)', border: '1px solid var(--accent-dark)', color: '#fff', boxShadow: '0 2px 8px var(--accent-mid)' }}>{children}</button>
   }
-  return (
-    <button title={title} onClick={onClick} style={style}>
-      {children}
-    </button>
-  )
+  if (active) {
+    return <button title={title} onClick={onClick} style={{ ...base, background: 'var(--surface3)', border: '1px solid var(--border2)', color: 'var(--text)' }}>{children}</button>
+  }
+  return <button title={title} onClick={onClick} style={{ ...base, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text2)' }}>{children}</button>
 }
 
 function Sep() {
-  return <div style={{ width: 1, height: 22, background: 'var(--border)', margin: '0 4px', flexShrink: 0 }} />
+  return <div style={{ width: 1, height: 20, background: 'var(--border)', flexShrink: 0 }} />
 }
 
-/* ── Groupe de boutons juxtaposés ── */
 function BtnGroup({ children }) {
   return (
     <div style={{ display: 'flex', borderRadius: 'var(--r)', overflow: 'hidden', border: '1px solid var(--border)', flexShrink: 0 }}>
@@ -79,11 +67,11 @@ function BtnGroup({ children }) {
 function BtnGroupItem({ active, onClick, children, accent }) {
   return (
     <button onClick={onClick} style={{
-      padding: '6px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer',
-      border: 'none', borderRight: '1px solid var(--border)', lineHeight: 1, height: 32,
+      padding: '0 10px', height: 32, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+      border: 'none', borderRight: '1px solid var(--border)', lineHeight: 1,
       background: active ? (accent ? 'var(--accent)' : 'var(--surface3)') : 'var(--surface)',
       color: active ? (accent ? '#fff' : 'var(--text)') : 'var(--text3)',
-      transition: 'all .12s',
+      transition: 'all .12s', flexShrink: 0,
     }}>
       {children}
     </button>
@@ -117,12 +105,10 @@ export default function Toolbar() {
   const loadRef   = useRef()
   const gazeboRef = useRef()
 
-  // Thème sombre
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light')
   }, [darkMode])
 
-  // Raccourcis Ctrl+Z / Ctrl+Y
   useEffect(() => {
     const onKey = e => {
       if ((e.ctrlKey||e.metaKey) && e.key==='z' && !e.shiftKey) { e.preventDefault(); undo() }
@@ -136,123 +122,114 @@ export default function Toolbar() {
 
   return (
     <div style={{
-      display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'nowrap',
-      padding: '0 14px', height: 48,
-      background: 'var(--surface)',
-      borderBottom: '1px solid var(--border)',
-      flexShrink: 0, overflow: 'hidden',
+      position: 'relative', display: 'flex', alignItems: 'center',
+      justifyContent: 'center', height: 48,
+      background: 'var(--surface)', borderBottom: '1px solid var(--border)',
+      flexShrink: 0,
     }}>
 
-      {/* Logo */}
-      <span style={{
-        fontSize: 13, fontWeight: 900, letterSpacing: '.05em', whiteSpace: 'nowrap',
-        fontFamily: "'Orbitron', sans-serif",
-        background: 'linear-gradient(135deg, var(--accent), var(--purple))',
-        WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-        marginRight: 6, flexShrink: 0,
-      }}>
-        PAMIS SIM
-      </span>
-      <span style={{
-        fontSize: 10, fontWeight: 700, color: 'var(--text3)',
-        background: 'var(--surface3)', borderRadius: 4, padding: '2px 6px',
-        letterSpacing: '.05em', flexShrink: 0,
-      }}>
-        2000
-      </span>
+      {/* ── Logo (gauche absolu) ── */}
+      <div style={{ position: 'absolute', left: 14, display: 'flex', alignItems: 'center', gap: 7 }}>
+        <span style={{
+          fontSize: 13, fontWeight: 900, letterSpacing: '.06em',
+          fontFamily: "'Orbitron', sans-serif",
+          background: 'linear-gradient(135deg, var(--accent), var(--purple))',
+          WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+        }}>
+          PAMIS SIM
+        </span>
+        <span style={{
+          fontSize: 9, fontWeight: 700, color: 'var(--text3)',
+          background: 'var(--surface3)', borderRadius: 4, padding: '2px 5px',
+          letterSpacing: '.06em',
+        }}>2000</span>
+      </div>
 
-      <Sep />
-
-      {/* Mode dessin / déplacement */}
-      <BtnGroup>
-        <BtnGroupItem active={mode==='draw'} accent onClick={() => setMode('draw')}>
-          ✏ {t.draw}
-        </BtnGroupItem>
-        <BtnGroupItem active={mode==='move'} onClick={() => setMode('move')}>
-          ↔ {t.move}
-        </BtnGroupItem>
-      </BtnGroup>
-
-      <Sep />
-
-      {/* Vue */}
-      <BtnGroup>
-        <BtnGroupItem active={viewMode==='2d'} onClick={() => setViewMode('2d')}>
-          2D
-        </BtnGroupItem>
-        <BtnGroupItem active={viewMode==='3d'} onClick={() => setViewMode('3d')}>
-          3D
-        </BtnGroupItem>
-      </BtnGroup>
-
-      <TBtn active={showGrid} onClick={() => setShowGrid(!showGrid)} title={t.grid}>
-        ⊞ {t.grid}
-      </TBtn>
-
-      <Sep />
-
-      {/* Fichiers */}
-      <TBtn onClick={() => saveToFile(robots, obstacles, { simMaxTime, simSpeed, gridColor, gridMinorStep, gridMajorStep, viewportColor, canvasBgColor })}>
-        💾 {t.save}
-      </TBtn>
-      <input type="file" accept=".json" ref={loadRef} style={{ display: 'none' }}
-        onChange={e => {
-          const f = e.target.files[0]; if (!f) return
-          loadFromFile(f, (r,o,m) => loadState(r,o,m), msg => alert(t.errorPrefix+msg))
-          e.target.value = ''
-        }} />
-      <TBtn onClick={() => loadRef.current?.click()}>
-        📂 {t.open}
-      </TBtn>
-
-      <input type="file" accept=".world,.sdf,.xml" ref={gazeboRef} style={{ display: 'none' }}
-        onChange={e => {
-          const f = e.target.files[0]; if (!f) return
-          const reader = new FileReader()
-          reader.onload = ev => {
-            try {
-              const { robots: r, obstacles: o } = importGazeboSDF(ev.target.result)
-              pushHistory({ robots, obstacles })
-              loadState(r, o, {})
-            } catch (err) { alert(t.errorPrefix + err.message) }
-          }
-          reader.readAsText(f)
-          e.target.value = ''
-        }} />
-      <TBtn onClick={() => gazeboRef.current?.click()} title={t.importGazeboTitle}>
-        Gazebo
-      </TBtn>
-
-      <Sep />
-
-      {/* Undo / Redo */}
-      <TBtn onClick={undo} title={t.undoTitle}>↩</TBtn>
-      <TBtn onClick={redo} title={t.redoTitle}>↪</TBtn>
-
-      {/* Espaceur */}
-      <div style={{ flex: 1 }} />
-
-      {/* Langue */}
-      <BtnGroup>
-        {['fr','en'].map(l => (
-          <BtnGroupItem key={l} active={lang===l} accent={lang===l} onClick={() => setLang(l)}>
-            {l.toUpperCase()}
+      {/* ── Outils centrés ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        {/* Mode */}
+        <BtnGroup>
+          <BtnGroupItem active={mode==='draw'} accent onClick={() => setMode('draw')} >
+            {t.draw}
           </BtnGroupItem>
-        ))}
-      </BtnGroup>
+          <BtnGroupItem active={mode==='move'} onClick={() => setMode('move')}>
+            {t.move}
+          </BtnGroupItem>
+        </BtnGroup>
 
-      {/* Thème */}
-      <button
-        onClick={() => setDarkMode(!darkMode)}
-        title={darkMode ? 'Mode clair' : 'Mode sombre'}
-        style={{
-          width: 32, height: 32, borderRadius: 'var(--r)',
-          background: 'var(--surface2)', border: '1px solid var(--border)',
-          fontSize: 15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}
-      >
-        {darkMode ? '☀️' : '🌙'}
-      </button>
+        <Sep />
+
+        {/* Vue */}
+        <BtnGroup>
+          <BtnGroupItem active={viewMode==='2d'} onClick={() => setViewMode('2d')}>2D</BtnGroupItem>
+          <BtnGroupItem active={viewMode==='3d'} onClick={() => setViewMode('3d')}>3D</BtnGroupItem>
+        </BtnGroup>
+
+        <TBtn active={showGrid} onClick={() => setShowGrid(!showGrid)} title={t.grid}>
+          {t.grid}
+        </TBtn>
+
+        <Sep />
+
+        {/* Fichiers */}
+        <TBtn onClick={() => saveToFile(robots, obstacles, { simMaxTime, simSpeed, gridColor, gridMinorStep, gridMajorStep, viewportColor, canvasBgColor })}>
+          {t.save}
+        </TBtn>
+        <input type="file" accept=".json" ref={loadRef} style={{ display: 'none' }}
+          onChange={e => {
+            const f = e.target.files[0]; if (!f) return
+            loadFromFile(f, (r,o,m) => loadState(r,o,m), msg => alert(t.errorPrefix+msg))
+            e.target.value = ''
+          }} />
+        <TBtn onClick={() => loadRef.current?.click()}>{t.open}</TBtn>
+
+        <input type="file" accept=".world,.sdf,.xml" ref={gazeboRef} style={{ display: 'none' }}
+          onChange={e => {
+            const f = e.target.files[0]; if (!f) return
+            const reader = new FileReader()
+            reader.onload = ev => {
+              try {
+                const { robots: r, obstacles: o } = importGazeboSDF(ev.target.result)
+                pushHistory({ robots, obstacles })
+                loadState(r, o, {})
+              } catch (err) { alert(t.errorPrefix + err.message) }
+            }
+            reader.readAsText(f)
+            e.target.value = ''
+          }} />
+        <TBtn onClick={() => gazeboRef.current?.click()} title={t.importGazeboTitle}>
+          {t.importGazebo}
+        </TBtn>
+
+        <Sep />
+
+        {/* Undo / Redo */}
+        <TBtn onClick={undo} title={t.undoTitle}>↩</TBtn>
+        <TBtn onClick={redo} title={t.redoTitle}>↪</TBtn>
+      </div>
+
+      {/* ── Langue + thème (droite absolu) ── */}
+      <div style={{ position: 'absolute', right: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <BtnGroup>
+          {['fr','en'].map(l => (
+            <BtnGroupItem key={l} active={lang===l} accent={lang===l} onClick={() => setLang(l)}>
+              {l.toUpperCase()}
+            </BtnGroupItem>
+          ))}
+        </BtnGroup>
+
+        <button
+          onClick={() => setDarkMode(!darkMode)}
+          title={darkMode ? 'Mode clair' : 'Mode sombre'}
+          style={{
+            width: 32, height: 32, borderRadius: 'var(--r)',
+            background: 'var(--surface2)', border: '1px solid var(--border)',
+            fontSize: 15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+        >
+          {darkMode ? '☀️' : '🌙'}
+        </button>
+      </div>
     </div>
   )
 }

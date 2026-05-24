@@ -314,12 +314,12 @@ export default function RightPanel() {
 
       {obsCollisions.length > 0 && (
         <div style={{ marginBottom: 8 }}>
-          <CollisionBadge count={obsCollisions.length} color="var(--yellow)" label={t.collObsLabel(obsCollisions.length)} />
+          <CollisionBadge count={obsCollisions.length} color="var(--red)" label={t.collObsLabel(obsCollisions.length)} />
           {obsCollisions.map((c, i) => {
             const r = robots.find(r => r.id === c.robotId)
             const o = obstacles.find(o => o.id === c.obsId)
             return (
-              <CollisionItem key={i} color="var(--yellow)">
+              <CollisionItem key={i} color="var(--red)">
                 <span style={{ color: r?.color, fontWeight: 700 }}>{r?.name}</span>
                 {' ↔ '}
                 <span style={{ fontWeight: 700, color: 'var(--text2)' }}>{o?.name}</span>
@@ -334,11 +334,11 @@ export default function RightPanel() {
 
       {borderCollisions.length > 0 && (
         <div style={{ marginBottom: 8 }}>
-          <CollisionBadge count={borderCollisions.length} color="var(--purple)" label={t.collBorderLabel(borderCollisions.length)} />
+          <CollisionBadge count={borderCollisions.length} color="var(--red)" label={t.collBorderLabel(borderCollisions.length)} />
           {borderCollisions.map((c, i) => {
             const r = robots.find(r => r.id === c.robotId)
             return (
-              <CollisionItem key={i} color="var(--purple)">
+              <CollisionItem key={i} color="var(--red)">
                 <span style={{ color: r?.color, fontWeight: 700 }}>{r?.name}</span>
                 {' ↔ '}
                 <span style={{ color: 'var(--text2)', fontWeight: 700 }}>{t.borderObs}</span>
