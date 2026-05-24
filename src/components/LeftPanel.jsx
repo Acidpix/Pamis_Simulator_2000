@@ -219,10 +219,18 @@ function RobotProps({ robot, onUpdate, robots, obstacles, stlRef }) {
             options={[{ v:'stop', label:'⏸ Stop aux pts' }, { v:'continuous', label:'→ Continu' }]}
             onChange={v => ur({ waypointMode: v })} />
         </Field>
-        <Field label={`Orientation de départ  ${Math.round(norm360(robot.heading))}°`}>
-          <input type="range" min={0} max={359} step={1} value={norm360(robot.heading)}
-            onChange={e => ur({ heading: +e.target.value })}
-            style={{ width: '100%', accentColor: 'var(--purple)' }} />
+        <Field label="Orientation de départ">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <input type="range" min={0} max={359} step={1} value={norm360(robot.heading)}
+              onChange={e => ur({ heading: +e.target.value })}
+              style={{ flex: 1, accentColor: 'var(--purple)', minWidth: 0 }} />
+            <input
+              type="number" min={0} max={359} step={1}
+              value={Math.round(norm360(robot.heading))}
+              onChange={e => { const v = parseInt(e.target.value); if (!isNaN(v)) ur({ heading: ((v % 360) + 360) % 360 }) }}
+              style={{ width: 52, padding: '4px 6px', borderRadius: 'var(--r)', border: '1px solid var(--border)', background: 'var(--surface2)', fontSize: 13, fontWeight: 700, color: 'var(--text)', textAlign: 'center', flexShrink: 0 }} />
+            <span style={{ fontSize: 11, color: 'var(--text3)', flexShrink: 0 }}>°</span>
+          </div>
         </Field>
       </SubSec>
 

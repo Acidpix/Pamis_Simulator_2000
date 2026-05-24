@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useMemo, useCallback, Suspense } from 'react'
+import React, { useRef, useEffect, useState, useMemo, useCallback, Suspense, memo } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { OrthographicCamera, PerspectiveCamera, OrbitControls, Line, Html, useTexture } from '@react-three/drei'
 import * as THREE from 'three'
@@ -420,27 +420,117 @@ function Scene(props) {
   )
 }
 
+const SHORTCUTS = [
+  { group: 'Souris', items: [
+    { keys: ['Clic table'], desc: 'Ajouter un waypoint (mode Tracer)' },
+    { keys: ['Clic waypoint'], desc: 'Supprimer le waypoint (mode Tracer)' },
+    { keys: ['Glisser'], desc: 'Déplacer robot / waypoint (mode Déplacer)' },
+    { keys: ['Ctrl', 'Glisser'], desc: 'Snap angle 15°' },
+    { keys: ['Molette'], desc: 'Zoom' },
+  ]},
+  { group: 'Clavier', items: [
+    { keys: ['Ctrl', 'Z'], desc: 'Annuler' },
+    { keys: ['Ctrl', 'Y'], desc: 'Rétablir' },
+    { keys: ['Espace'], desc: 'Lancer / Pause simulation' },
+  ]},
+]
+
+function Kbd({ children }) {
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+      padding: '1px 6px', borderRadius: 5, fontSize: 10, fontWeight: 700,
+      background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)',
+      color: '#fff', fontFamily: 'monospace', whiteSpace: 'nowrap',
+    }}>{children}</span>
+  )
+}
+
+function ShortcutsOverlay() {
+  const [open, setOpen] = useState(true)
+  return (
+    <div style={{
+      position: 'absolute', bottom: 14, right: 14, zIndex: 10,
+      display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6,
+      pointerEvents: 'none',
+    }}>
+      {open && (
+        <div style={{
+          background: 'rgba(15,20,30,0.72)',
+          backdropFilter: 'blur(10px)',
+          borderRadius: 12,
+          border: '1px solid rgba(255,255,255,0.12)',
+          padding: '10px 14px',
+          minWidth: 240,
+          pointerEvents: 'auto',
+          boxShadow: '0 4px 24px rgba(0,0,0,0.35)',
+        }}>
+          <div style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 8 }}>
+            Raccourcis
+          </div>
+          {SHORTCUTS.map(group => (
+            <div key={group.group} style={{ marginBottom: 8 }}>
+              <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 5 }}>{group.group}</div>
+              {group.items.map(item => (
+                <div key={item.desc} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                  <div style={{ display: 'flex', gap: 3, flexShrink: 0 }}>
+                    {item.keys.map((k, i) => (
+                      <React.Fragment key={k}>
+                        {i > 0 && <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', alignSelf: 'center' }}>+</span>}
+                        <Kbd>{k}</Kbd>
+                      </React.Fragment>
+                    ))}
+                  </div>
+                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.65)', lineHeight: 1.3 }}>{item.desc}</span>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+      <button
+        onClick={() => setOpen(o => !o)}
+        title={open ? 'Masquer les raccourcis' : 'Afficher les raccourcis'}
+        style={{
+          pointerEvents: 'auto',
+          width: 32, height: 32, borderRadius: 8,
+          border: '1px solid rgba(255,255,255,0.18)',
+          background: open ? 'rgba(99,102,241,0.7)' : 'rgba(15,20,30,0.65)',
+          backdropFilter: 'blur(8px)',
+          color: '#fff', fontSize: 15, cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
+          transition: 'all .15s',
+        }}
+      >⌨</button>
+    </div>
+  )
+}
+
 export default function SimCanvas({ onTableClick }) {
   const s = useSimStore()
   return (
-    <Canvas shadows style={{ width:'100%', height:'100%' }} gl={{ antialias:true }}
-      onCreated={({ gl }) => gl.setClearColor(new THREE.Color(s.canvasBgColor || '#dde3ec'))}>
-      <Scene
-        robots={s.robots} selectedRobotId={s.selectedRobotId}
-        obstacles={s.obstacles} selectedObsId={s.selectedObsId}
-        simTime={s.simTime} collisions={s.collisions}
-        obsCollisions={s.obsCollisions} borderCollisions={s.borderCollisions}
-        showGrid={s.showGrid} gridColor={s.gridColor}
-        gridMinorStep={s.gridMinorStep} gridMajorStep={s.gridMajorStep}
-        bgImage={s.bgImage} viewportColor={s.viewportColor} canvasBgColor={s.canvasBgColor}
-        tableW={s.tableW} tableH={s.tableH}
-        mode={s.mode} viewMode={s.viewMode}
-        selectRobot={s.selectRobot} selectObstacle={s.selectObstacle}
-        setRobotPosition={s.setRobotPosition} setObstaclePosition={s.setObstaclePosition}
-        removeWaypoint={s.removeWaypoint} moveWaypoint={s.moveWaypoint}
-        updateWaypointPause={s.updateWaypointPause}
-        onTableClick={onTableClick}
-      />
-    </Canvas>
+    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+      <Canvas shadows style={{ width:'100%', height:'100%' }} gl={{ antialias:true }}
+        onCreated={({ gl }) => gl.setClearColor(new THREE.Color(s.canvasBgColor || '#dde3ec'))}>
+        <Scene
+          robots={s.robots} selectedRobotId={s.selectedRobotId}
+          obstacles={s.obstacles} selectedObsId={s.selectedObsId}
+          simTime={s.simTime} collisions={s.collisions}
+          obsCollisions={s.obsCollisions} borderCollisions={s.borderCollisions}
+          showGrid={s.showGrid} gridColor={s.gridColor}
+          gridMinorStep={s.gridMinorStep} gridMajorStep={s.gridMajorStep}
+          bgImage={s.bgImage} viewportColor={s.viewportColor} canvasBgColor={s.canvasBgColor}
+          tableW={s.tableW} tableH={s.tableH}
+          mode={s.mode} viewMode={s.viewMode}
+          selectRobot={s.selectRobot} selectObstacle={s.selectObstacle}
+          setRobotPosition={s.setRobotPosition} setObstaclePosition={s.setObstaclePosition}
+          removeWaypoint={s.removeWaypoint} moveWaypoint={s.moveWaypoint}
+          updateWaypointPause={s.updateWaypointPause}
+          onTableClick={onTableClick}
+        />
+      </Canvas>
+      <ShortcutsOverlay />
+    </div>
   )
 }

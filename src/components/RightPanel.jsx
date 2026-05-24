@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { useSimStore, computeSegments, getRobotPose } from '../store/simStore.js'
+import { useSimStore, computeSegments, getRobotPose, pushHistory } from '../store/simStore.js'
 import { useT } from '../i18n.js'
 
 const TABLE_W = 3.0
@@ -140,23 +140,57 @@ function StatPill({ label, value, color }) {
   )
 }
 
-function SegRow({ seg, idx, color, t }) {
+const WP_COLORS = ['#6366f1','#06b6d4','#10b981','#f59e0b','#ec4899','#8b5cf6','#14b8a6','#f97316']
+const wpColor = idx => WP_COLORS[idx % WP_COLORS.length]
+
+function SegRow({ seg, idx, robotColor, t, onRemove }) {
+  const wc = wpColor(idx)
   return (
-    <div style={{ padding: '8px 0', borderBottom: '1px dashed var(--border)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
+    <div style={{
+      margin: '6px 0',
+      borderRadius: 10,
+      border: `1px solid ${wc}30`,
+      background: `${wc}08`,
+      overflow: 'hidden',
+    }}>
+      {/* En-tête du waypoint */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 7,
+        padding: '7px 10px 6px',
+        borderBottom: `1px solid ${wc}20`,
+        background: `${wc}12`,
+      }}>
         <span style={{
-          fontSize: 10, fontWeight: 800, padding: '2px 7px', borderRadius: 10,
-          background: color + '22', color,
-        }}>#{idx+1}</span>
-        <span className="tabular" style={{ fontSize: 11, color: 'var(--text3)' }}>{t.segStartAt} {seg.startTime}s</span>
+          width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+          background: wc, color: '#fff',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 11, fontWeight: 800, letterSpacing: '-.02em',
+        }}>{idx + 1}</span>
+        <span className="tabular" style={{ flex: 1, fontSize: 11, color: 'var(--text3)', fontWeight: 500 }}>
+          départ à <strong style={{ color: 'var(--text2)' }}>{seg.startTime}s</strong>
+        </span>
         {seg.pause > 0 && (
           <span style={{
-            fontSize: 10, padding: '1px 6px', borderRadius: 8,
+            fontSize: 10, padding: '2px 7px', borderRadius: 8,
             background: 'var(--yellow-dim)', color: 'var(--yellow)', fontWeight: 700,
           }}>⏱ +{seg.pause}s</span>
         )}
+        {onRemove && (
+          <button
+            onClick={onRemove}
+            title="Supprimer ce waypoint"
+            style={{
+              width: 22, height: 22, borderRadius: 6, border: `1px solid var(--red)44`,
+              background: 'var(--red)11', color: 'var(--red)', fontSize: 13,
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0, lineHeight: 1, fontWeight: 700, transition: 'all .12s',
+            }}
+          >×</button>
+        )}
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
+
+      {/* Métriques */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, padding: '6px 10px 8px' }}>
         {[
           { l: t.segDistance, v: seg.dist + ' mm' },
           { l: t.segMotion,   v: seg.duration + ' s' },
@@ -164,20 +198,20 @@ function SegRow({ seg, idx, color, t }) {
           { l: t.segTurn,     v: seg.relAngle !== null ? (seg.relAngle > 0 ? '+' : '') + seg.relAngle + '°' : '—' },
           ...(seg.rotDuration > 0 ? [{ l: t.segRotation, v: seg.rotDuration + ' s' }] : []),
         ].map(({ l, v }) => (
-          <div key={l}>
-            <div style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 600 }}>{l}</div>
+          <div key={l} style={{ padding: '3px 0' }}>
+            <div style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 600, letterSpacing: '.04em', textTransform: 'uppercase' }}>{l}</div>
             <div className="tabular" style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{v}</div>
           </div>
         ))}
       </div>
-      <div style={{ marginTop: 4, fontSize: 10, color: 'var(--text3)' }} className="tabular">
+      <div style={{ padding: '0 10px 7px', fontSize: 10, color: 'var(--text3)', fontFamily: 'monospace' }} className="tabular">
         ({Math.round(seg.from.x*1000)}, {Math.round(seg.from.y*1000)}) → ({Math.round(seg.to.x*1000)}, {Math.round(seg.to.y*1000)}) mm
       </div>
     </div>
   )
 }
 
-function RobotTrajectory({ robot, defaultOpen, onPauseChange, t }) {
+function RobotTrajectory({ robot, defaultOpen, onPauseChange, onRemoveWaypoint, t }) {
   const [open, setOpen] = useState(defaultOpen)
   const segments = useMemo(() => computeSegments(robot), [robot])
   const totalDistMm = segments.reduce((a,s) => a + s.dist, 0)
@@ -228,9 +262,10 @@ function RobotTrajectory({ robot, defaultOpen, onPauseChange, t }) {
             <div style={{ padding: '0 12px' }}>
               {segments.map((seg, i) => (
                 <div key={i}>
-                  <SegRow seg={seg} idx={i} color={robot.color} t={t} />
+                  <SegRow seg={seg} idx={i} robotColor={robot.color} t={t}
+                    onRemove={onRemoveWaypoint ? () => onRemoveWaypoint(i) : null} />
                   {onPauseChange && (
-                    <div style={{ padding: '5px 0 8px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ padding: '2px 0 6px', display: 'flex', alignItems: 'center', gap: 8, paddingLeft: 4 }}>
                       <span style={{ fontSize: 11, color: 'var(--text3)', flex: 1 }}>{t.pauseOnArrival}</span>
                       <PauseInput value={robot.waypoints[i]?.pause ?? 0} onChange={v => onPauseChange(i, v)} />
                     </div>
@@ -248,6 +283,7 @@ function RobotTrajectory({ robot, defaultOpen, onPauseChange, t }) {
 export default function RightPanel() {
   const t = useT()
   const updateWaypointPause = useSimStore(s => s.updateWaypointPause)
+  const removeWaypoint  = useSimStore(s => s.removeWaypoint)
   const robots          = useSimStore(s => s.robots)
   const selectedRobotId = useSimStore(s => s.selectedRobotId)
   const collisions      = useSimStore(s => s.collisions)
@@ -368,6 +404,7 @@ export default function RightPanel() {
           key={r.id} robot={r} t={t}
           defaultOpen={r.id === selectedRobotId || robots.length === 1}
           onPauseChange={(idx, v) => updateWaypointPause(r.id, idx, v)}
+          onRemoveWaypoint={idx => { pushHistory({ robots, obstacles }); removeWaypoint(r.id, idx) }}
         />
       ))}
 
