@@ -2,60 +2,106 @@
 
 /* ── Thème clair (défaut) ── */
 :root {
-  --bg:       #f0f2f5;
-  --surface:  #ffffff;
-  --surface2: #f8f9fb;
-  --border:   #e2e8f0;
-  --border2:  #cbd5e1;
-  --text:     #1e293b;
-  --text2:    #475569;
-  --text3:    #94a3b8;
-  --blue:     #2563eb;
-  --blue-dim: #eff6ff;
-  --blue-mid: #bfdbfe;
-  --green:    #16a34a;
-  --green-dim:#f0fdf4;
-  --red:      #dc2626;
-  --red-dim:  #fef2f2;
-  --orange:   #d97706;
-  --shadow:   0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
-  --r:  6px;
-  --r2: 10px;
+  --bg:          #f1f5f9;
+  --surface:     #ffffff;
+  --surface2:    #f8fafc;
+  --surface3:    #e2e8f0;
+  --border:      #e2e8f0;
+  --border2:     #cbd5e1;
+  --text:        #0f172a;
+  --text2:       #475569;
+  --text3:       #94a3b8;
+
+  --accent:      #f97316;
+  --accent-dark: #ea580c;
+  --accent-dim:  rgba(249,115,22,.1);
+  --accent-mid:  rgba(249,115,22,.25);
+
+  --purple:      #a855f7;
+  --purple-dark: #9333ea;
+  --purple-dim:  rgba(168,85,247,.1);
+  --purple-mid:  rgba(168,85,247,.25);
+
+  --green:       #10b981;
+  --green-dark:  #059669;
+  --green-dim:   rgba(16,185,129,.1);
+
+  --red:         #ef4444;
+  --red-dark:    #dc2626;
+  --red-dim:     rgba(239,68,68,.1);
+
+  --yellow:      #f59e0b;
+  --yellow-dim:  rgba(245,158,11,.1);
+
+  --blue:        #3b82f6;
+  --blue-dim:    rgba(59,130,246,.1);
+
+  --shadow-sm:   0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+  --shadow:      0 4px 12px rgba(0,0,0,.08), 0 2px 4px rgba(0,0,0,.04);
+  --shadow-lg:   0 8px 24px rgba(0,0,0,.12);
+
+  --r:  8px;
+  --r2: 12px;
+  --r3: 16px;
 }
 
 /* ── Thème sombre ── */
 [data-theme="dark"] {
-  --bg:       #0f1117;
-  --surface:  #1a1d27;
-  --surface2: #222638;
-  --border:   #2d3148;
-  --border2:  #3d4260;
-  --text:     #e2e8f0;
-  --text2:    #94a3b8;
-  --text3:    #475569;
-  --blue:     #60a5fa;
-  --blue-dim: #1e3a5f;
-  --blue-mid: #1d4ed8;
-  --green:    #4ade80;
-  --green-dim:#052e16;
-  --red:      #f87171;
-  --red-dim:  #3b0a0a;
-  --orange:   #fbbf24;
-  --shadow:   0 1px 4px rgba(0,0,0,.4);
+  --bg:          #0a0e17;
+  --surface:     #111827;
+  --surface2:    #1a2235;
+  --surface3:    #243044;
+  --border:      #1e2d45;
+  --border2:     #2d4060;
+  --text:        #f1f5f9;
+  --text2:       #94a3b8;
+  --text3:       #475569;
+
+  --accent:      #fb923c;
+  --accent-dark: #f97316;
+  --accent-dim:  rgba(251,146,60,.15);
+  --accent-mid:  rgba(251,146,60,.3);
+
+  --purple:      #c084fc;
+  --purple-dark: #a855f7;
+  --purple-dim:  rgba(192,132,252,.15);
+  --purple-mid:  rgba(192,132,252,.3);
+
+  --green:       #34d399;
+  --green-dark:  #10b981;
+  --green-dim:   rgba(52,211,153,.15);
+
+  --red:         #f87171;
+  --red-dark:    #ef4444;
+  --red-dim:     rgba(248,113,113,.15);
+
+  --yellow:      #fbbf24;
+  --yellow-dim:  rgba(251,191,36,.15);
+
+  --blue:        #60a5fa;
+  --blue-dim:    rgba(96,165,250,.15);
+
+  --shadow-sm:   0 1px 3px rgba(0,0,0,.3);
+  --shadow:      0 4px 16px rgba(0,0,0,.4);
+  --shadow-lg:   0 8px 32px rgba(0,0,0,.5);
 }
 
 html, body, #root {
   width: 100%; height: 100%;
   background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Exo 2', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 14px;
   overflow: hidden;
 }
 
 button { font-family: inherit; cursor: pointer; border: none; outline: none; }
-input, select { font-family: inherit; outline: none; color: var(--text); background: var(--surface2); }
+input, select, textarea { font-family: inherit; outline: none; color: var(--text); }
 
-::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+/* ── Numéros tabulaires pour les données ── */
+.tabular { font-variant-numeric: tabular-nums; font-family: 'Share Tech Mono', monospace; }

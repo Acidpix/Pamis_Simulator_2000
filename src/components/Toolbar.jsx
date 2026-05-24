@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react'
-import { useSimStore, detectCollisions, detectObstacleCollisions, detectBorderCollisions, canUndo, canRedo, pushHistory } from '../store/simStore.js'
+import { useSimStore, canUndo, canRedo, pushHistory } from '../store/simStore.js'
 import { useT } from '../i18n.js'
 import { importGazeboSDF } from '../utils/importGazeboSDF.js'
 
@@ -38,74 +38,84 @@ function loadFromFile(file, onLoad, onError) {
   reader.readAsText(file)
 }
 
-function Btn({ active, onClick, children, variant='default', title, small }) {
-  const pad = small ? '5px 10px' : '7px 13px'
-  const fz  = small ? 13 : 14
-  const v = {
-    default: { background:active?'#2563eb':'var(--surface)', border:`1.5px solid ${active?'#2563eb':'var(--border)'}`, color:active?'#fff':'var(--text2)' },
-    green:   { background:active?'#16a34a':'var(--surface)', border:`1.5px solid ${active?'#16a34a':'var(--border)'}`, color:active?'#fff':'var(--text2)' },
-    ghost:   { background:'transparent', border:'1.5px solid var(--border)', color:'var(--text2)' },
+/* ── Bouton toolbar ── */
+function TBtn({ active, onClick, children, title, accent, danger }) {
+  const base = {
+    display: 'inline-flex', alignItems: 'center', gap: 5,
+    padding: '6px 11px', borderRadius: 'var(--r)', fontSize: 13,
+    fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+    lineHeight: 1, transition: 'all .12s', height: 32,
+  }
+  let style = { ...base }
+  if (active && accent) {
+    style = { ...base, background: 'var(--accent)', border: '1px solid var(--accent-dark)', color: '#fff', boxShadow: '0 2px 8px var(--accent-mid)' }
+  } else if (active) {
+    style = { ...base, background: 'var(--surface3)', border: '1px solid var(--border2)', color: 'var(--text)' }
+  } else if (danger) {
+    style = { ...base, background: 'transparent', border: '1px solid var(--border)', color: 'var(--red)' }
+  } else {
+    style = { ...base, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text2)' }
   }
   return (
-    <button title={title} onClick={onClick} style={{
-      display:'inline-flex', alignItems:'center', gap:5,
-      padding:pad, borderRadius:'var(--r)', fontSize:fz, fontWeight:500,
-      cursor:'pointer', whiteSpace:'nowrap', lineHeight:1, transition:'all .12s',
-      ...(v[variant]||v.default),
-    }}>
+    <button title={title} onClick={onClick} style={style}>
       {children}
     </button>
   )
 }
 
 function Sep() {
-  return <div style={{ width:1, height:24, background:'var(--border)', margin:'0 3px', flexShrink:0 }} />
+  return <div style={{ width: 1, height: 22, background: 'var(--border)', margin: '0 4px', flexShrink: 0 }} />
+}
+
+/* ── Groupe de boutons juxtaposés ── */
+function BtnGroup({ children }) {
+  return (
+    <div style={{ display: 'flex', borderRadius: 'var(--r)', overflow: 'hidden', border: '1px solid var(--border)', flexShrink: 0 }}>
+      {children}
+    </div>
+  )
+}
+
+function BtnGroupItem({ active, onClick, children, accent }) {
+  return (
+    <button onClick={onClick} style={{
+      padding: '6px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+      border: 'none', borderRight: '1px solid var(--border)', lineHeight: 1, height: 32,
+      background: active ? (accent ? 'var(--accent)' : 'var(--surface3)') : 'var(--surface)',
+      color: active ? (accent ? '#fff' : 'var(--text)') : 'var(--text3)',
+      transition: 'all .12s',
+    }}>
+      {children}
+    </button>
+  )
 }
 
 export default function Toolbar() {
-  const mode         = useSimStore(s=>s.mode)
-  const setMode      = useSimStore(s=>s.setMode)
-  const simPlaying   = useSimStore(s=>s.simPlaying)
-  const setSimPlaying= useSimStore(s=>s.setSimPlaying)
-  const simTime      = useSimStore(s=>s.simTime)
-  const setSimTime   = useSimStore(s=>s.setSimTime)
-  const simMaxTime   = useSimStore(s=>s.simMaxTime)
-  const setSimMaxTime= useSimStore(s=>s.setSimMaxTime)
-  const simSpeed     = useSimStore(s=>s.simSpeed)
-  const setSimSpeed  = useSimStore(s=>s.setSimSpeed)
-  const showGrid     = useSimStore(s=>s.showGrid)
-  const setShowGrid  = useSimStore(s=>s.setShowGrid)
-  const viewMode     = useSimStore(s=>s.viewMode)
-  const setViewMode  = useSimStore(s=>s.setViewMode)
-  const darkMode     = useSimStore(s=>s.darkMode)
-  const setDarkMode  = useSimStore(s=>s.setDarkMode)
-  const lang         = useSimStore(s=>s.lang)
-  const setLang      = useSimStore(s=>s.setLang)
-  const robots       = useSimStore(s=>s.robots)
-  const obstacles    = useSimStore(s=>s.obstacles)
-  const setCollisions= useSimStore(s=>s.setCollisions)
-  const setObsCollisions= useSimStore(s=>s.setObsCollisions)
-  const loadState    = useSimStore(s=>s.loadState)
-  const gridColor    = useSimStore(s=>s.gridColor)
-  const gridMinorStep= useSimStore(s=>s.gridMinorStep)
-  const gridMajorStep= useSimStore(s=>s.gridMajorStep)
-  const canvasBgColor= useSimStore(s=>s.canvasBgColor)
-  const viewportColor= useSimStore(s=>s.viewportColor)
+  const mode         = useSimStore(s => s.mode)
+  const setMode      = useSimStore(s => s.setMode)
+  const showGrid     = useSimStore(s => s.showGrid)
+  const setShowGrid  = useSimStore(s => s.setShowGrid)
+  const viewMode     = useSimStore(s => s.viewMode)
+  const setViewMode  = useSimStore(s => s.setViewMode)
+  const darkMode     = useSimStore(s => s.darkMode)
+  const setDarkMode  = useSimStore(s => s.setDarkMode)
+  const lang         = useSimStore(s => s.lang)
+  const setLang      = useSimStore(s => s.setLang)
+  const robots       = useSimStore(s => s.robots)
+  const obstacles    = useSimStore(s => s.obstacles)
+  const loadState    = useSimStore(s => s.loadState)
+  const gridColor    = useSimStore(s => s.gridColor)
+  const gridMinorStep= useSimStore(s => s.gridMinorStep)
+  const gridMajorStep= useSimStore(s => s.gridMajorStep)
+  const canvasBgColor= useSimStore(s => s.canvasBgColor)
+  const viewportColor= useSimStore(s => s.viewportColor)
+  const simMaxTime   = useSimStore(s => s.simMaxTime)
+  const simSpeed     = useSimStore(s => s.simSpeed)
+  const undo         = useSimStore(s => s.undo)
+  const redo         = useSimStore(s => s.redo)
 
-  const undo = useSimStore(s=>s.undo)
-  const redo = useSimStore(s=>s.redo)
-
-  const loadRef    = useRef()
-  const gazeboRef  = useRef()
-  const rafRef     = useRef(null)
-  const lastRef = useRef(null)
-  const simTimeRef    = useRef(simTime)
-  const simSpeedRef   = useRef(simSpeed)
-  const simMaxTimeRef = useRef(simMaxTime)
-
-  useEffect(() => { simTimeRef.current    = simTime    }, [simTime])
-  useEffect(() => { simSpeedRef.current   = simSpeed   }, [simSpeed])
-  useEffect(() => { simMaxTimeRef.current = simMaxTime }, [simMaxTime])
+  const loadRef   = useRef()
+  const gazeboRef = useRef()
 
   // Thème sombre
   useEffect(() => {
@@ -122,111 +132,80 @@ export default function Toolbar() {
     return () => window.removeEventListener('keydown', onKey)
   }, [undo, redo])
 
-  // Boucle simulation
-  useEffect(() => {
-    if (!simPlaying) { cancelAnimationFrame(rafRef.current); lastRef.current = null; return }
-    const tick = ts => {
-      if (lastRef.current !== null) {
-        const next = simTimeRef.current + (ts - lastRef.current) / 1000 * simSpeedRef.current
-        if (next >= simMaxTimeRef.current) { setSimTime(simMaxTimeRef.current); setSimPlaying(false); return }
-        setSimTime(next)
-      }
-      lastRef.current = ts
-      rafRef.current = requestAnimationFrame(tick)
-    }
-    rafRef.current = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(rafRef.current)
-  }, [simPlaying])
-
-  const setBorderCollisions = useSimStore(s=>s.setBorderCollisions)
-  const tableW = useSimStore(s=>s.tableW)
-  const tableH = useSimStore(s=>s.tableH)
-
-  // Détection collisions
-  useEffect(() => {
-    setCollisions(robots.length>=2 ? detectCollisions(robots, simMaxTime) : [])
-    setObsCollisions(robots.length>0&&obstacles.length>0 ? detectObstacleCollisions(robots, obstacles, simMaxTime) : [])
-    setBorderCollisions(robots.length>0 ? detectBorderCollisions(robots, tableW, tableH, simMaxTime) : [])
-  }, [robots, obstacles, simMaxTime, tableW, tableH])
-
   const t = useT()
 
   return (
     <div style={{
-      display:'flex', alignItems:'center', gap:6, flexWrap:'wrap',
-      padding:'8px 14px', background:'var(--surface)',
-      borderBottom:'1px solid var(--border)', flexShrink:0,
+      display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'nowrap',
+      padding: '0 14px', height: 48,
+      background: 'var(--surface)',
+      borderBottom: '1px solid var(--border)',
+      flexShrink: 0, overflow: 'hidden',
     }}>
-      <span style={{ fontSize:13, fontWeight:800, color:'var(--blue)', letterSpacing:'-.3px', marginRight:4, whiteSpace:'nowrap' }}>
-        TURBO PAMIS SIMULATOR 2000
+
+      {/* Logo */}
+      <span style={{
+        fontSize: 13, fontWeight: 900, letterSpacing: '.05em', whiteSpace: 'nowrap',
+        fontFamily: "'Orbitron', sans-serif",
+        background: 'linear-gradient(135deg, var(--accent), var(--purple))',
+        WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+        marginRight: 6, flexShrink: 0,
+      }}>
+        PAMIS SIM
       </span>
-      <Sep />
-
-      <Btn active={mode==='draw'} onClick={()=>setMode('draw')} title={t.drawTitle}>{t.draw}</Btn>
-      <Btn active={mode==='move'} onClick={()=>setMode('move')} title={t.moveTitle}>{t.move}</Btn>
-
-      <Sep />
-
-      <Btn variant="green" active={simPlaying} onClick={() => { if(simTime>=simMaxTime) setSimTime(0); setSimPlaying(!simPlaying) }}>
-        {simPlaying ? t.pause : t.play}
-      </Btn>
-      <Btn variant="ghost" onClick={() => { setSimPlaying(false); setSimTime(0) }}>{t.reset}</Btn>
-
-      {/* Timeline */}
-      <div style={{ display:'flex', alignItems:'center', gap:6, flex:1, minWidth:120 }}>
-        <span style={{ fontSize:13, fontWeight:700, color:'var(--blue)', minWidth:40, fontVariantNumeric:'tabular-nums' }}>
-          {simTime.toFixed(1)}s
-        </span>
-        <input type="range" min={0} max={simMaxTime} step={0.1} value={simTime}
-          onMouseDown={()=>setSimPlaying(false)}
-          onChange={e=>{ setSimPlaying(false); setSimTime(+e.target.value) }}
-          style={{ flex:1, minWidth:60, accentColor:'var(--blue)', cursor:'pointer' }} />
-        <span style={{ fontSize:12, color:'var(--text3)' }}>/{simMaxTime}s</span>
-      </div>
-
-      <select value={simSpeed} onChange={e=>setSimSpeed(+e.target.value)}
-        style={{ padding:'5px 7px', borderRadius:'var(--r)', border:'1.5px solid var(--border)', background:'var(--surface)', fontSize:13 }}>
-        {[0.25,0.5,1,2,4].map(v=><option key={v} value={v}>{v}×</option>)}
-      </select>
-
-      <div style={{ display:'flex', alignItems:'center', gap:4 }}>
-        <span style={{ fontSize:12, color:'var(--text3)' }}>{t.duration}</span>
-        <input type="number" min={5} max={120} step={5} value={simMaxTime} onChange={e=>setSimMaxTime(+e.target.value)}
-          style={{ width:56, padding:'5px 6px', borderRadius:'var(--r)', border:'1.5px solid var(--border)', background:'var(--surface)', fontSize:13 }} />
-        <span style={{ fontSize:12, color:'var(--text3)' }}>s</span>
-      </div>
+      <span style={{
+        fontSize: 10, fontWeight: 700, color: 'var(--text3)',
+        background: 'var(--surface3)', borderRadius: 4, padding: '2px 6px',
+        letterSpacing: '.05em', flexShrink: 0,
+      }}>
+        2000
+      </span>
 
       <Sep />
 
-      <Btn active={showGrid} onClick={()=>setShowGrid(!showGrid)} small>{t.grid}</Btn>
-      <Btn active={viewMode==='3d'} onClick={()=>setViewMode(viewMode==='2d'?'3d':'2d')} small>
-        {viewMode==='3d' ? t.view2d : t.view3d}
-      </Btn>
-      <Btn active={darkMode} onClick={()=>setDarkMode(!darkMode)} small>
-        {darkMode ? '☀️' : '🌙'}
-      </Btn>
-
-      {/* Langue */}
-      <div style={{ display:'flex', borderRadius:'var(--r)', overflow:'hidden', border:'1.5px solid var(--border)', flexShrink:0 }}>
-        {['fr','en'].map(l => (
-          <button key={l} onClick={()=>setLang(l)} style={{
-            padding:'4px 9px', fontSize:12, fontWeight:700, cursor:'pointer', border:'none',
-            background: lang===l ? 'var(--blue)' : 'var(--surface)',
-            color: lang===l ? '#fff' : 'var(--text3)',
-          }}>{l.toUpperCase()}</button>
-        ))}
-      </div>
+      {/* Mode dessin / déplacement */}
+      <BtnGroup>
+        <BtnGroupItem active={mode==='draw'} accent onClick={() => setMode('draw')}>
+          ✏ {t.draw}
+        </BtnGroupItem>
+        <BtnGroupItem active={mode==='move'} onClick={() => setMode('move')}>
+          ↔ {t.move}
+        </BtnGroupItem>
+      </BtnGroup>
 
       <Sep />
 
-      <Btn variant="ghost" small onClick={()=>saveToFile(robots, obstacles, { simMaxTime, simSpeed, gridColor, gridMinorStep, gridMajorStep, viewportColor, canvasBgColor })}>
-        {t.save}
-      </Btn>
-      <input type="file" accept=".json" ref={loadRef} style={{ display:'none' }}
-        onChange={e => { const f=e.target.files[0]; if(!f)return; loadFromFile(f,(r,o,m)=>loadState(r,o,m),msg=>alert(t.errorPrefix+msg)); e.target.value='' }} />
-      <Btn variant="ghost" small onClick={()=>loadRef.current?.click()}>{t.open}</Btn>
+      {/* Vue */}
+      <BtnGroup>
+        <BtnGroupItem active={viewMode==='2d'} onClick={() => setViewMode('2d')}>
+          2D
+        </BtnGroupItem>
+        <BtnGroupItem active={viewMode==='3d'} onClick={() => setViewMode('3d')}>
+          3D
+        </BtnGroupItem>
+      </BtnGroup>
 
-      <input type="file" accept=".world,.sdf,.xml" ref={gazeboRef} style={{ display:'none' }}
+      <TBtn active={showGrid} onClick={() => setShowGrid(!showGrid)} title={t.grid}>
+        ⊞ {t.grid}
+      </TBtn>
+
+      <Sep />
+
+      {/* Fichiers */}
+      <TBtn onClick={() => saveToFile(robots, obstacles, { simMaxTime, simSpeed, gridColor, gridMinorStep, gridMajorStep, viewportColor, canvasBgColor })}>
+        💾 {t.save}
+      </TBtn>
+      <input type="file" accept=".json" ref={loadRef} style={{ display: 'none' }}
+        onChange={e => {
+          const f = e.target.files[0]; if (!f) return
+          loadFromFile(f, (r,o,m) => loadState(r,o,m), msg => alert(t.errorPrefix+msg))
+          e.target.value = ''
+        }} />
+      <TBtn onClick={() => loadRef.current?.click()}>
+        📂 {t.open}
+      </TBtn>
+
+      <input type="file" accept=".world,.sdf,.xml" ref={gazeboRef} style={{ display: 'none' }}
         onChange={e => {
           const f = e.target.files[0]; if (!f) return
           const reader = new FileReader()
@@ -240,14 +219,40 @@ export default function Toolbar() {
           reader.readAsText(f)
           e.target.value = ''
         }} />
-      <Btn variant="ghost" small onClick={()=>gazeboRef.current?.click()} title={t.importGazeboTitle}>
-        {t.importGazebo}
-      </Btn>
+      <TBtn onClick={() => gazeboRef.current?.click()} title={t.importGazeboTitle}>
+        Gazebo
+      </TBtn>
 
       <Sep />
 
-      <Btn variant="ghost" small onClick={undo} title={t.undoTitle}>{t.undo}</Btn>
-      <Btn variant="ghost" small onClick={redo} title={t.redoTitle}>{t.redo}</Btn>
+      {/* Undo / Redo */}
+      <TBtn onClick={undo} title={t.undoTitle}>↩</TBtn>
+      <TBtn onClick={redo} title={t.redoTitle}>↪</TBtn>
+
+      {/* Espaceur */}
+      <div style={{ flex: 1 }} />
+
+      {/* Langue */}
+      <BtnGroup>
+        {['fr','en'].map(l => (
+          <BtnGroupItem key={l} active={lang===l} accent={lang===l} onClick={() => setLang(l)}>
+            {l.toUpperCase()}
+          </BtnGroupItem>
+        ))}
+      </BtnGroup>
+
+      {/* Thème */}
+      <button
+        onClick={() => setDarkMode(!darkMode)}
+        title={darkMode ? 'Mode clair' : 'Mode sombre'}
+        style={{
+          width: 32, height: 32, borderRadius: 'var(--r)',
+          background: 'var(--surface2)', border: '1px solid var(--border)',
+          fontSize: 15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}
+      >
+        {darkMode ? '☀️' : '🌙'}
+      </button>
     </div>
   )
 }
