@@ -131,81 +131,97 @@ function CollisionItem({ children, color }) {
 function StatPill({ label, value, color }) {
   return (
     <div style={{
-      textAlign: 'center', padding: '8px 4px',
-      background: 'var(--surface2)', borderRadius: 'var(--r)',
+      textAlign: 'center', padding: '9px 6px',
+      background: 'var(--surface2)', borderRadius: 10,
     }}>
-      <div style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 3 }}>{label}</div>
-      <div className="tabular" style={{ fontSize: 15, fontWeight: 800, color: color || 'var(--text)' }}>{value}</div>
+      <div style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 500, marginBottom: 4, letterSpacing: '.01em' }}>{label}</div>
+      <div style={{ fontSize: 16, fontWeight: 700, color: color || 'var(--text)', letterSpacing: '-.02em' }}>{value}</div>
     </div>
   )
 }
 
-const WP_COLORS = ['#6366f1','#06b6d4','#10b981','#f59e0b','#ec4899','#8b5cf6','#14b8a6','#f97316']
-const wpColor = idx => WP_COLORS[idx % WP_COLORS.length]
+const WP_ACCENT = ['#818cf8','#38bdf8','#34d399','#fbbf24','#f472b6','#a78bfa','#2dd4bf','#fb923c']
+const wpAccent = idx => WP_ACCENT[idx % WP_ACCENT.length]
+
+function MetricRow({ label, value }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid var(--border)' }}>
+      <span style={{ fontSize: 12, color: 'var(--text3)', fontWeight: 400 }}>{label}</span>
+      <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', letterSpacing: '-.01em' }}>{value}</span>
+    </div>
+  )
+}
 
 function SegRow({ seg, idx, robotColor, t, onRemove }) {
-  const wc = wpColor(idx)
+  const accent = wpAccent(idx)
   return (
     <div style={{
-      margin: '6px 0',
-      borderRadius: 10,
-      border: `1px solid ${wc}30`,
-      background: `${wc}08`,
+      margin: '0 0 10px',
+      borderRadius: 12,
+      background: 'var(--surface)',
+      border: '1px solid var(--border)',
       overflow: 'hidden',
     }}>
-      {/* En-tête du waypoint */}
+      {/* Bandeau supérieur */}
       <div style={{
-        display: 'flex', alignItems: 'center', gap: 7,
-        padding: '7px 10px 6px',
-        borderBottom: `1px solid ${wc}20`,
-        background: `${wc}12`,
+        display: 'flex', alignItems: 'center', gap: 10,
+        padding: '9px 12px 8px',
+        borderLeft: `3px solid ${accent}`,
       }}>
-        <span style={{
-          width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
-          background: wc, color: '#fff',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 11, fontWeight: 800, letterSpacing: '-.02em',
-        }}>{idx + 1}</span>
-        <span className="tabular" style={{ flex: 1, fontSize: 11, color: 'var(--text3)', fontWeight: 500 }}>
-          départ à <strong style={{ color: 'var(--text2)' }}>{seg.startTime}s</strong>
-        </span>
-        {seg.pause > 0 && (
-          <span style={{
-            fontSize: 10, padding: '2px 7px', borderRadius: 8,
-            background: 'var(--yellow-dim)', color: 'var(--yellow)', fontWeight: 700,
-          }}>⏱ +{seg.pause}s</span>
-        )}
-        {onRemove && (
-          <button
-            onClick={onRemove}
-            title="Supprimer ce waypoint"
-            style={{
-              width: 22, height: 22, borderRadius: 6, border: `1px solid var(--red)44`,
-              background: 'var(--red)11', color: 'var(--red)', fontSize: 13,
-              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              flexShrink: 0, lineHeight: 1, fontWeight: 700, transition: 'all .12s',
-            }}
-          >×</button>
-        )}
+        {/* Numéro élégant */}
+        <div style={{
+          fontSize: 18, fontWeight: 300, color: accent,
+          letterSpacing: '-.04em', lineHeight: 1, flexShrink: 0, minWidth: 24,
+          fontVariantNumeric: 'tabular-nums',
+        }}>{String(idx + 1).padStart(2, '0')}</div>
+
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 400 }}>
+            Départ à <span style={{ color: 'var(--text2)', fontWeight: 500 }}>{seg.startTime} s</span>
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 1 }}>
+            {Math.round(seg.from.x * 1000)}, {Math.round(seg.from.y * 1000)}
+            <span style={{ margin: '0 4px', color: 'var(--border)', fontSize: 10 }}>→</span>
+            {Math.round(seg.to.x * 1000)}, {Math.round(seg.to.y * 1000)} <span style={{ fontSize: 10 }}>mm</span>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+          {seg.pause > 0 && (
+            <span style={{
+              fontSize: 11, padding: '2px 8px', borderRadius: 20,
+              background: 'var(--yellow-dim)', color: 'var(--yellow)', fontWeight: 500,
+            }}>+{seg.pause} s</span>
+          )}
+          {onRemove && (
+            <button
+              onClick={onRemove}
+              title="Supprimer ce waypoint"
+              style={{
+                width: 24, height: 24, borderRadius: 6,
+                border: '1px solid var(--border)',
+                background: 'transparent', color: 'var(--text3)', fontSize: 14,
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0, transition: 'all .12s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--red)'; e.currentTarget.style.color = 'var(--red)'; e.currentTarget.style.background = 'var(--red)11' }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text3)'; e.currentTarget.style.background = 'transparent' }}
+            >×</button>
+          )}
+        </div>
       </div>
 
       {/* Métriques */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, padding: '6px 10px 8px' }}>
-        {[
-          { l: t.segDistance, v: seg.dist + ' mm' },
-          { l: t.segMotion,   v: seg.duration + ' s' },
-          { l: t.segHeading,  v: seg.angle + '°' },
-          { l: t.segTurn,     v: seg.relAngle !== null ? (seg.relAngle > 0 ? '+' : '') + seg.relAngle + '°' : '—' },
-          ...(seg.rotDuration > 0 ? [{ l: t.segRotation, v: seg.rotDuration + ' s' }] : []),
-        ].map(({ l, v }) => (
-          <div key={l} style={{ padding: '3px 0' }}>
-            <div style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 600, letterSpacing: '.04em', textTransform: 'uppercase' }}>{l}</div>
-            <div className="tabular" style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{v}</div>
-          </div>
-        ))}
-      </div>
-      <div style={{ padding: '0 10px 7px', fontSize: 10, color: 'var(--text3)', fontFamily: 'monospace' }} className="tabular">
-        ({Math.round(seg.from.x*1000)}, {Math.round(seg.from.y*1000)}) → ({Math.round(seg.to.x*1000)}, {Math.round(seg.to.y*1000)}) mm
+      <div style={{ padding: '2px 12px 4px' }}>
+        <MetricRow label={t.segDistance} value={seg.dist + ' mm'} />
+        <MetricRow label={t.segMotion}   value={seg.duration + ' s'} />
+        <MetricRow label={t.segHeading}  value={seg.angle + '°'} />
+        {seg.relAngle !== null && (
+          <MetricRow label={t.segTurn} value={(seg.relAngle > 0 ? '+' : '') + seg.relAngle + '°'} />
+        )}
+        {seg.rotDuration > 0 && (
+          <MetricRow label={t.segRotation} value={seg.rotDuration + ' s'} />
+        )}
       </div>
     </div>
   )
@@ -230,27 +246,26 @@ function RobotTrajectory({ robot, defaultOpen, onPauseChange, onRemoveWaypoint, 
       <div
         onClick={() => setOpen(o => !o)}
         style={{
-          display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px',
+          display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px',
           cursor: 'pointer',
           borderBottom: open ? '1px solid var(--border)' : 'none',
-          background: open ? 'var(--surface2)' : 'transparent',
         }}
       >
         <span style={{
-          width: 10, height: 10, borderRadius: '50%', background: robot.color,
-          flexShrink: 0, boxShadow: `0 0 8px ${robot.color}80`,
+          width: 8, height: 8, borderRadius: '50%', background: robot.color,
+          flexShrink: 0, boxShadow: `0 0 6px ${robot.color}90`,
         }} />
-        <span style={{ flex: 1, fontSize: 13, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <span style={{ flex: 1, fontSize: 14, fontWeight: 600, letterSpacing: '-.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text)' }}>
           {robot.name}
         </span>
-        <span className="tabular" style={{ fontSize: 11, color: 'var(--text3)', flexShrink: 0 }}>{totalDistMm}mm</span>
-        <span className="tabular" style={{ fontSize: 11, color: 'var(--text3)', flexShrink: 0 }}>{totalTime.toFixed(1)}s</span>
-        <span style={{ fontSize: 11, color: 'var(--text3)' }}>{open ? '▼' : '▶'}</span>
+        <span style={{ fontSize: 12, color: 'var(--text3)', fontWeight: 400, flexShrink: 0 }}>{totalDistMm} mm</span>
+        <span style={{ fontSize: 12, color: 'var(--text3)', fontWeight: 400, flexShrink: 0 }}>{totalTime.toFixed(1)} s</span>
+        <span style={{ fontSize: 10, color: 'var(--text3)', marginLeft: 2 }}>{open ? '▾' : '▸'}</span>
       </div>
 
       {open && (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, padding: 10, borderBottom: '1px solid var(--border)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, padding: '10px 12px', borderBottom: '1px solid var(--border)' }}>
             <StatPill label={t.segDistance} value={totalDistMm > 0 ? totalDistMm + ' mm' : '—'} color="var(--accent)" />
             <StatPill label={t.segMotion}   value={totalTime > 0 ? totalTime.toFixed(1) + ' s' : '—'} />
             <StatPill label="Pts"           value={segments.length} color="var(--purple)" />
@@ -259,14 +274,14 @@ function RobotTrajectory({ robot, defaultOpen, onPauseChange, onRemoveWaypoint, 
           {segments.length === 0 ? (
             <div style={{ padding: 14, textAlign: 'center', color: 'var(--text3)', fontSize: 12 }}>{t.noWaypoints}</div>
           ) : (
-            <div style={{ padding: '0 12px' }}>
+            <div style={{ padding: '10px 12px 4px' }}>
               {segments.map((seg, i) => (
                 <div key={i}>
                   <SegRow seg={seg} idx={i} robotColor={robot.color} t={t}
                     onRemove={onRemoveWaypoint ? () => onRemoveWaypoint(i) : null} />
                   {onPauseChange && (
-                    <div style={{ padding: '2px 0 6px', display: 'flex', alignItems: 'center', gap: 8, paddingLeft: 4 }}>
-                      <span style={{ fontSize: 11, color: 'var(--text3)', flex: 1 }}>{t.pauseOnArrival}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '-4px 0 10px', padding: '6px 12px', background: 'var(--surface2)', borderRadius: 8 }}>
+                      <span style={{ fontSize: 11, color: 'var(--text3)', flex: 1, fontWeight: 400 }}>{t.pauseOnArrival}</span>
                       <PauseInput value={robot.waypoints[i]?.pause ?? 0} onChange={v => onPauseChange(i, v)} />
                     </div>
                   )}
