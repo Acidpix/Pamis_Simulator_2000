@@ -1,4 +1,4 @@
-# TURBO PAMIS SIMULATOR 2000 v1.1
+# TURBO PAMIS SIMULATOR 2000 v1.2
 
 Simulateur de trajectoires de robots pour la **Coupe de France de Robotique**.  
 Permet de planifier, visualiser et exporter les trajectoires de plusieurs robots sur une table 3×2 m.
@@ -49,7 +49,9 @@ Permet de planifier, visualiser et exporter les trajectoires de plusieurs robots
 ### Sauvegarde / Save & Export
 - **Sauvegarder** : JSON complet (robots, obstacles, configuration)
 - **Ouvrir** : import d'une sauvegarde JSON
-- **Exporter trajectoires** : JSON des segments (pour intégration embarquée)
+- **Exporter trajectoires JSON** : JSON des waypoints/segments (panneau droit, pour intégration embarquée)
+- **Import Gazebo SDF** : import depuis un fichier `.world` / `.sdf` / `.xml` (acteurs → robots, modèles → obstacles, reconstruction automatique des waypoints depuis les trajectoires denses)
+- **Export Gazebo SDF** : export de la scène au format Gazebo SDF (panneau droit)
 - Annuler / Rétablir — Ctrl+Z / Ctrl+Y (60 niveaux)
 
 ---
