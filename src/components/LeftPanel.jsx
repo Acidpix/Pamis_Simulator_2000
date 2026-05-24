@@ -337,7 +337,22 @@ export default function LeftPanel() {
   const stlRef = useRef()
   const bgRef  = useRef()
   const [tab, setTab] = useState('robots')
+  // Sections de propriétés ouvertes (indépendamment)
+  const [openRobots, setOpenRobots] = useState(new Set())
   const t = useT()
+
+  const handleSelectRobot = (id) => {
+    selectRobot(id)
+    // Sélection depuis la liste → replie tout sauf le sélectionné
+    setOpenRobots(new Set([id]))
+  }
+  const toggleRobotSection = (id) => {
+    setOpenRobots(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
 
   const [panelW, setPanelW] = useState(290)
   const resizing = useRef(false)
@@ -393,76 +408,91 @@ export default function LeftPanel() {
           {/* ── Tab Robots ── */}
           {tab === 'robots' && (
             <>
-              {robots.length === 0 && (
-                <p style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 10, padding: '8px 12px' }}>
-                  Ajoutez un robot pour commencer.
-                </p>
-              )}
+              {/* Liste des robots */}
+              <SectionCard accent="var(--accent)">
+                <div style={{ padding: '9px 12px 4px' }}>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 7 }}>
+                    Robots
+                    {robots.length > 0 && (
+                      <span style={{ fontSize: 10, background: 'var(--accent)', color: '#fff', borderRadius: 10, padding: '1px 6px', fontWeight: 700 }}>{robots.length}</span>
+                    )}
+                  </div>
 
-              {/* ── Un bloc par robot ── */}
+                  {robots.length === 0 && (
+                    <p style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 8 }}>Ajoutez un robot pour commencer.</p>
+                  )}
+
+                  {robots.map(robot => {
+                    const isSelected = robot.id === selectedRobotId
+                    return (
+                      <div key={robot.id} onClick={() => handleSelectRobot(robot.id)} style={{
+                        display: 'flex', alignItems: 'center', gap: 8, padding: '7px 8px',
+                        borderRadius: 'var(--r)', cursor: 'pointer', marginBottom: 3,
+                        background: isSelected ? 'var(--accent-dim)' : 'transparent',
+                        border: `1px solid ${isSelected ? 'var(--accent-mid)' : 'transparent'}`,
+                        transition: 'all .12s',
+                      }}>
+                        <span style={{ width: 10, height: 10, borderRadius: '50%', background: robot.color, flexShrink: 0, boxShadow: isSelected ? `0 0 7px ${robot.color}` : 'none' }} />
+                        <span style={{ flex: 1, fontWeight: 600, fontSize: 13, color: isSelected ? 'var(--accent)' : 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {robot.name}
+                        </span>
+                        <span style={{ fontSize: 10, color: 'var(--text3)', background: 'var(--surface3)', borderRadius: 4, padding: '2px 5px', fontWeight: 600, flexShrink: 0 }}>
+                          {robot.waypoints.length}pt
+                        </span>
+                        <button
+                          onClick={e => { e.stopPropagation(); pushHistory({ robots, obstacles }); removeRobot(robot.id) }}
+                          style={{ width: 20, height: 20, borderRadius: 4, border: 'none', background: 'transparent', color: 'var(--text3)', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, lineHeight: 1 }}
+                        >×</button>
+                      </div>
+                    )
+                  })}
+
+                  <button onClick={() => { addRobot(); }} style={{
+                    width: '100%', marginTop: 4, marginBottom: 4, padding: '7px 10px', borderRadius: 'var(--r)',
+                    border: '1.5px dashed var(--accent-mid)', background: 'var(--accent-dim)',
+                    color: 'var(--accent)', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                  }}>+ Ajouter un robot</button>
+                </div>
+              </SectionCard>
+
+              {/* Propriétés par robot — accordéon indépendant */}
+              <input type="file" ref={stlRef} accept=".stl" onChange={handleStlImport} style={{ display: 'none' }} />
               {robots.map(robot => {
+                const isOpen = openRobots.has(robot.id)
                 const isSelected = robot.id === selectedRobotId
                 return (
-                  <SectionCard key={robot.id} accent={isSelected ? 'var(--accent)' : 'var(--border)'}>
-                    {/* En-tête */}
+                  <SectionCard key={robot.id} accent={isSelected ? robot.color : 'var(--border)'}>
+                    {/* En-tête cliquable pour déplier/replier */}
                     <div
-                      onClick={() => selectRobot(robot.id)}
+                      onClick={() => toggleRobotSection(robot.id)}
                       style={{
-                        display: 'flex', alignItems: 'center', gap: 8,
-                        padding: '9px 12px', cursor: 'pointer',
-                        background: isSelected ? 'var(--accent-dim)' : 'transparent',
+                        display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px',
+                        cursor: 'pointer',
+                        background: isOpen ? 'var(--surface2)' : 'transparent',
                         transition: 'background .12s',
                       }}
                     >
-                      <span style={{
-                        width: 10, height: 10, borderRadius: '50%', background: robot.color,
-                        flexShrink: 0,
-                        boxShadow: isSelected ? `0 0 8px ${robot.color}` : 'none',
-                        transition: 'box-shadow .2s',
-                      }} />
-                      <span style={{ flex: 1, fontWeight: 700, fontSize: 13, color: isSelected ? 'var(--accent)' : 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <span style={{ width: 10, height: 10, borderRadius: '50%', background: robot.color, flexShrink: 0, boxShadow: isOpen ? `0 0 8px ${robot.color}80` : 'none' }} />
+                      <span style={{ flex: 1, fontWeight: 700, fontSize: 13, color: isOpen ? 'var(--text)' : 'var(--text2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {robot.name}
                       </span>
-                      <span style={{ fontSize: 10, color: 'var(--text3)', background: 'var(--surface3)', borderRadius: 4, padding: '2px 5px', fontWeight: 600, flexShrink: 0 }}>
-                        {robot.waypoints.length}pt
-                      </span>
-                      <button
-                        onClick={e => { e.stopPropagation(); pushHistory({ robots, obstacles }); removeRobot(robot.id) }}
-                        style={{ width: 20, height: 20, borderRadius: 4, border: 'none', background: 'transparent', color: 'var(--text3)', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, lineHeight: 1 }}
-                      >×</button>
-                      <span style={{ fontSize: 11, color: isSelected ? 'var(--accent)' : 'var(--text3)', flexShrink: 0 }}>
-                        {isSelected ? '▼' : '▶'}
+                      <span style={{ fontSize: 11, color: 'var(--text3)', flexShrink: 0 }}>
+                        {isOpen ? '▼' : '▶'}
                       </span>
                     </div>
 
-                    {/* Propriétés — uniquement si sélectionné, key force le remontage */}
-                    {isSelected && (
+                    {/* Contenu déplié — key force le remontage au changement de robot */}
+                    {isOpen && (
                       <div key={robot.id}>
                         <div style={{ height: 1, background: 'var(--border)' }} />
-                        <input type="file" ref={stlRef} accept=".stl" onChange={handleStlImport} style={{ display: 'none' }} />
-
-                        <RobotProps
-                          robot={robot}
-                          onUpdate={updateRobot}
-                          robots={robots}
-                          obstacles={obstacles}
-                          stlRef={stlRef}
-                        />
-
-                        {/* Boutons d'action */}
+                        <RobotProps robot={robot} onUpdate={updateRobot} robots={robots} obstacles={obstacles} stlRef={stlRef} />
                         <div style={{ display: 'flex', gap: 6, padding: '0 12px 12px' }}>
-                          <ActionBtn
-                            color="var(--red)"
-                            style={{ flex: 1 }}
-                            onClick={() => { pushHistory({ robots, obstacles }); clearWaypoints(robot.id) }}
-                          >
+                          <ActionBtn color="var(--red)" style={{ flex: 1 }}
+                            onClick={() => { pushHistory({ robots, obstacles }); clearWaypoints(robot.id) }}>
                             🗑 Trajectoire
                           </ActionBtn>
-                          <ActionBtn
-                            color="var(--purple)"
-                            style={{ flex: 1 }}
-                            onClick={() => handleDuplicate(robot)}
-                          >
+                          <ActionBtn color="var(--purple)" style={{ flex: 1 }}
+                            onClick={() => handleDuplicate(robot)}>
                             ⧉ Dupliquer
                           </ActionBtn>
                         </div>
@@ -471,13 +501,6 @@ export default function LeftPanel() {
                   </SectionCard>
                 )
               })}
-
-              {/* Bouton Ajouter */}
-              <button onClick={() => addRobot()} style={{
-                width: '100%', marginTop: 4, padding: '8px 10px', borderRadius: 'var(--r)',
-                border: '1.5px dashed var(--accent-mid)', background: 'var(--accent-dim)',
-                color: 'var(--accent)', fontSize: 13, fontWeight: 700, cursor: 'pointer',
-              }}>+ Ajouter un robot</button>
             </>
           )}
 
