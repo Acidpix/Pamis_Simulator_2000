@@ -123,25 +123,26 @@ export default function Toolbar() {
   return (
     <div style={{
       position: 'relative', display: 'flex', alignItems: 'center',
-      justifyContent: 'center', height: 48,
+      justifyContent: 'center', height: 56,
       background: 'var(--surface)', borderBottom: '1px solid var(--border)',
       flexShrink: 0,
     }}>
 
       {/* ── Logo (gauche absolu) ── */}
-      <div style={{ position: 'absolute', left: 14, display: 'flex', alignItems: 'center', gap: 7 }}>
+      <div style={{ position: 'absolute', left: 14, display: 'flex', alignItems: 'baseline', gap: 6 }}>
         <span style={{
-          fontSize: 13, fontWeight: 900, letterSpacing: '.06em',
+          fontSize: 22, fontWeight: 900, letterSpacing: '.04em',
           fontFamily: "'Orbitron', sans-serif",
           background: 'linear-gradient(135deg, var(--accent), var(--purple))',
           WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+          lineHeight: 1,
         }}>
           PAMIS SIM
         </span>
         <span style={{
-          fontSize: 9, fontWeight: 700, color: 'var(--text3)',
-          background: 'var(--surface3)', borderRadius: 4, padding: '2px 5px',
-          letterSpacing: '.06em',
+          fontSize: 13, fontWeight: 800, color: 'var(--text3)',
+          background: 'var(--surface3)', borderRadius: 4, padding: '2px 6px',
+          letterSpacing: '.08em', lineHeight: 1,
         }}>2000</span>
       </div>
 

@@ -3,10 +3,10 @@ import { useSimStore } from './store/simStore.js'
 const T = {
   fr: {
     // Toolbar
-    draw: '✏️ Tracer', move: '✋ Déplacer',
-    play: '▶ Simuler', pause: '⏸ Pause', reset: '⏮ Reset',
+    draw: 'Waypoint', move: 'Déplacer',
+    play: 'Simuler', pause: 'Pause', reset: 'Reset',
     duration: 'Durée', grid: '⊞ Grille',
-    view3d: '🧊 3D', view2d: '🗺 2D',
+    view3d: '3D', view2d: '2D',
     save: '💾 Sauvegarder', open: '📂 Ouvrir',
     undo: '↩ Annuler', redo: '↪ Rétablir',
     drawTitle: 'Cliquer la table pour ajouter des waypoints',
@@ -67,7 +67,7 @@ const T = {
     segDistance: 'Distance', segMotion: 'Déplacement',
     segHeading: 'Cap', segTurn: 'Virage', segRotation: 'Rotation',
     segStartAt: 'départ à',
-    importGazebo: '📥 Importer SDF',
+    importGazebo: 'Import Gazebo',
     importGazeboTitle: 'Importer un fichier Gazebo SDF (.world)',
     exportJson: '⬇ Exporter JSON trajectoires',
     exportGazebo: '⬇ Exporter Gazebo SDF',
@@ -85,10 +85,10 @@ const T = {
   },
   en: {
     // Toolbar
-    draw: '✏️ Draw', move: '✋ Move',
-    play: '▶ Simulate', pause: '⏸ Pause', reset: '⏮ Reset',
+    draw: 'Waypoint', move: 'Move',
+    play: 'Simulate', pause: 'Pause', reset: 'Reset',
     duration: 'Duration', grid: '⊞ Grid',
-    view3d: '🧊 3D', view2d: '🗺 2D',
+    view3d: '3D', view2d: '2D',
     save: '💾 Save', open: '📂 Open',
     undo: '↩ Undo', redo: '↪ Redo',
     drawTitle: 'Click the table to add waypoints',
@@ -149,7 +149,7 @@ const T = {
     segDistance: 'Distance', segMotion: 'Motion',
     segHeading: 'Heading', segTurn: 'Turn', segRotation: 'Rotation',
     segStartAt: 'starts at',
-    importGazebo: '📥 Import SDF',
+    importGazebo: 'Import Gazebo',
     importGazeboTitle: 'Import a Gazebo SDF file (.world)',
     exportJson: '⬇ Export trajectory JSON',
     exportGazebo: '⬇ Export Gazebo SDF',

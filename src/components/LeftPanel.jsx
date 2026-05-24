@@ -80,7 +80,7 @@ function SubSec({ title, children, defaultOpen = true }) {
         borderBottom: '1px dashed var(--border)',
       }}>
         <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.06em' }}>{title}</span>
-        <span style={{ fontSize: 10, color: 'var(--text3)', transform: open ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }}>▶</span>
+        <span style={{ fontSize: 11, color: 'var(--text3)' }}>{open ? '▼' : '▶'}</span>
       </div>
       {open && children}
     </div>

@@ -211,7 +211,7 @@ function RobotTrajectory({ robot, defaultOpen, onPauseChange, t }) {
         </span>
         <span className="tabular" style={{ fontSize: 11, color: 'var(--text3)', flexShrink: 0 }}>{totalDistMm}mm</span>
         <span className="tabular" style={{ fontSize: 11, color: 'var(--text3)', flexShrink: 0 }}>{totalTime.toFixed(1)}s</span>
-        <span style={{ fontSize: 10, color: 'var(--text3)', transition: 'transform .15s', transform: open ? 'rotate(90deg)' : 'none' }}>▶</span>
+        <span style={{ fontSize: 11, color: 'var(--text3)' }}>{open ? '▼' : '▶'}</span>
       </div>
 
       {open && (
