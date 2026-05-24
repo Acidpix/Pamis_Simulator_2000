@@ -1,4 +1,4 @@
-# TURBO PAMIS SIMULATOR 2000
+# TURBO PAMIS SIMULATOR 2000 v1.1
 
 Simulateur de trajectoires de robots pour la **Coupe de France de Robotique**.  
 Permet de planifier, visualiser et exporter les trajectoires de plusieurs robots sur une table 3×2 m.
