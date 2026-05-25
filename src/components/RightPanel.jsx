@@ -98,6 +98,27 @@ function PauseInput({ value, onChange }) {
   )
 }
 
+function HeadingInput({ value, onChange }) {
+  const enabled = value != null
+  const norm = v => ((v % 360) + 360) % 360
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <input type="checkbox" checked={enabled}
+        onChange={e => onChange(e.target.checked ? 0 : null)}
+        style={{ cursor: 'pointer', accentColor: 'var(--accent)' }} />
+      <input type="number" value={enabled ? Math.round(norm(value)) : ''}
+        placeholder="auto" min={0} max={359} step={1} disabled={!enabled}
+        onChange={e => { const v = parseInt(e.target.value); if (!isNaN(v)) onChange(norm(v)) }}
+        style={{
+          width: 50, padding: '3px 6px', borderRadius: 6,
+          border: '1px solid var(--border)', background: 'var(--surface2)',
+          fontSize: 12, color: 'var(--text)', opacity: enabled ? 1 : 0.5,
+        }} />
+      <span style={{ fontSize: 11, color: 'var(--text3)' }}>°</span>
+    </div>
+  )
+}
+
 function CollisionBadge({ count, color, label }) {
   return (
     <div style={{
@@ -198,6 +219,7 @@ function SegRow({ seg, idx, robotColor, t, onRemove }) {
           { l: t.segHeading,  v: seg.angle + '°' },
           { l: t.segTurn,     v: seg.relAngle !== null ? (seg.relAngle > 0 ? '+' : '') + seg.relAngle + '°' : '—' },
           ...(seg.rotDuration > 0 ? [{ l: t.segRotation, v: seg.rotDuration + ' s' }] : []),
+          ...(seg.arrRotDuration > 0 ? [{ l: t.segArrRotation, v: seg.arrRotDuration + ' s' }] : []),
         ].map(({ l, v }) => (
           <div key={l} style={{ padding: '3px 0' }}>
             <div style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 400, marginBottom: 2 }}>{l}</div>
@@ -216,11 +238,11 @@ function SegRow({ seg, idx, robotColor, t, onRemove }) {
   )
 }
 
-function RobotTrajectory({ robot, defaultOpen, onPauseChange, onRemoveWaypoint, t }) {
+function RobotTrajectory({ robot, defaultOpen, onPauseChange, onHeadingChange, onRemoveWaypoint, t }) {
   const [open, setOpen] = useState(defaultOpen)
   const segments = useMemo(() => computeSegments(robot), [robot])
   const totalDistMm = segments.reduce((a,s) => a + s.dist, 0)
-  const totalTime   = segments.reduce((a,s) => a + s.duration + s.rotDuration, 0) + (robot.startDelay ?? 0)
+  const totalTime   = segments.reduce((a,s) => a + s.duration + s.rotDuration + (s.arrRotDuration||0) + (s.pause||0), 0) + (robot.startDelay ?? 0)
 
   return (
     <div style={{
@@ -268,10 +290,20 @@ function RobotTrajectory({ robot, defaultOpen, onPauseChange, onRemoveWaypoint, 
                 <div key={i}>
                   <SegRow seg={seg} idx={i} robotColor={robot.color} t={t}
                     onRemove={onRemoveWaypoint ? () => onRemoveWaypoint(i) : null} />
-                  {onPauseChange && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '-4px 0 10px', padding: '6px 12px', background: 'var(--surface2)', borderRadius: 8 }}>
-                      <span style={{ fontSize: 11, color: 'var(--text3)', flex: 1, fontWeight: 400 }}>{t.pauseOnArrival}</span>
-                      <PauseInput value={robot.waypoints[i]?.pause ?? 0} onChange={v => onPauseChange(i, v)} />
+                  {(onPauseChange || onHeadingChange) && (
+                    <div style={{ margin: '-4px 0 10px', padding: '6px 12px', background: 'var(--surface2)', borderRadius: 8 }}>
+                      {onPauseChange && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: 11, color: 'var(--text3)', flex: 1, fontWeight: 400 }}>{t.pauseOnArrival}</span>
+                          <PauseInput value={robot.waypoints[i]?.pause ?? 0} onChange={v => onPauseChange(i, v)} />
+                        </div>
+                      )}
+                      {onHeadingChange && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                          <span style={{ fontSize: 11, color: 'var(--text3)', flex: 1, fontWeight: 400 }}>{t.arrivalHeading}</span>
+                          <HeadingInput value={robot.waypoints[i]?.heading ?? null} onChange={v => onHeadingChange(i, v)} />
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -287,6 +319,7 @@ function RobotTrajectory({ robot, defaultOpen, onPauseChange, onRemoveWaypoint, 
 export default function RightPanel() {
   const t = useT()
   const updateWaypointPause = useSimStore(s => s.updateWaypointPause)
+  const updateWaypointHeading = useSimStore(s => s.updateWaypointHeading)
   const removeWaypoint  = useSimStore(s => s.removeWaypoint)
   const robots          = useSimStore(s => s.robots)
   const selectedRobotId = useSimStore(s => s.selectedRobotId)
@@ -408,6 +441,7 @@ export default function RightPanel() {
           key={r.id} robot={r} t={t}
           defaultOpen={r.id === selectedRobotId || robots.length === 1}
           onPauseChange={(idx, v) => updateWaypointPause(r.id, idx, v)}
+          onHeadingChange={(idx, v) => updateWaypointHeading(r.id, idx, v)}
           onRemoveWaypoint={idx => { pushHistory({ robots, obstacles }); removeWaypoint(r.id, idx) }}
         />
       ))}
