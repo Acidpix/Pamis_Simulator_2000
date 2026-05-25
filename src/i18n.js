@@ -89,6 +89,19 @@ const T = {
       '⑦ 🌙 pour le mode sombre',
     ],
     borderObs: 'bord',
+    // ShortcutsOverlay
+    scTitle: 'Raccourcis',
+    scHide: 'Masquer les raccourcis', scShow: 'Afficher les raccourcis',
+    scGroup1: 'Souris', scGroup2: 'Clavier',
+    scClickTable: 'Clic table',   scClickTableDesc: 'Ajouter un waypoint (mode Tracer)',
+    scClickSeg:   'Clic segment', scClickSegDesc:   'Insérer un waypoint (mode Tracer)',
+    scClickWp:    'Clic waypoint',scClickWpDesc:    'Supprimer le waypoint (mode Tracer)',
+    scDrag: 'Glisser', scDragDesc: 'Déplacer robot / waypoint (mode Déplacer)',
+    scCtrlDragDesc: 'Snap angle 15°',
+    scWheel: 'Molette', scWheelDesc: 'Zoom',
+    scMidClick: 'Clic molette', scMidClickDesc: 'Panoramique (2D & 3D)',
+    scQDesc: 'Basculer mode Tracer / Déplacer',
+    scSpace: 'Espace', scSpaceDesc: 'Lancer / Pause simulation',
   },
   en: {
     // Toolbar
@@ -178,6 +191,19 @@ const T = {
       '⑦ 🌙 for dark mode',
     ],
     borderObs: 'border',
+    // ShortcutsOverlay
+    scTitle: 'Shortcuts',
+    scHide: 'Hide shortcuts', scShow: 'Show shortcuts',
+    scGroup1: 'Mouse', scGroup2: 'Keyboard',
+    scClickTable: 'Click table',   scClickTableDesc: 'Add a waypoint (Draw mode)',
+    scClickSeg:   'Click segment', scClickSegDesc:   'Insert a waypoint (Draw mode)',
+    scClickWp:    'Click waypoint',scClickWpDesc:    'Delete the waypoint (Draw mode)',
+    scDrag: 'Drag', scDragDesc: 'Move robot / waypoint (Move mode)',
+    scCtrlDragDesc: 'Snap angle 15°',
+    scWheel: 'Scroll', scWheelDesc: 'Zoom',
+    scMidClick: 'Middle click', scMidClickDesc: 'Pan (2D & 3D)',
+    scQDesc: 'Toggle Draw / Move mode',
+    scSpace: 'Space', scSpaceDesc: 'Play / Pause simulation',
   },
 }
 

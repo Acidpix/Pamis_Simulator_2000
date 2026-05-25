@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState, useMemo, useCallback, Suspense, memo } from 'react'
+import { useT } from '../i18n.js'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { OrthographicCamera, PerspectiveCamera, OrbitControls, Line, Html, useTexture } from '@react-three/drei'
 import * as THREE from 'three'
@@ -475,19 +476,19 @@ function Scene(props) {
   )
 }
 
-const SHORTCUTS = [
-  { group: 'Souris', items: [
-    { keys: ['Clic table'], desc: 'Ajouter un waypoint (mode Tracer)' },
-    { keys: ['Clic segment'], desc: 'Insérer un waypoint (mode Tracer)' },
-    { keys: ['Clic waypoint'], desc: 'Supprimer le waypoint (mode Tracer)' },
-    { keys: ['Glisser'], desc: 'Déplacer robot / waypoint (mode Déplacer)' },
-    { keys: ['Ctrl', 'Glisser'], desc: 'Snap angle 15°' },
-    { keys: ['Molette'], desc: 'Zoom' },
-    { keys: ['Clic molette'], desc: 'Panoramique (2D & 3D)' },
+const getShortcuts = t => [
+  { group: t.scGroup1, items: [
+    { keys: [t.scClickTable],   desc: t.scClickTableDesc },
+    { keys: [t.scClickSeg],     desc: t.scClickSegDesc },
+    { keys: [t.scClickWp],      desc: t.scClickWpDesc },
+    { keys: [t.scDrag],         desc: t.scDragDesc },
+    { keys: ['Ctrl', t.scDrag], desc: t.scCtrlDragDesc },
+    { keys: [t.scWheel],        desc: t.scWheelDesc },
+    { keys: [t.scMidClick],     desc: t.scMidClickDesc },
   ]},
-  { group: 'Clavier', items: [
-    { keys: ['Q'], desc: 'Basculer mode Tracer / Déplacer' },
-    { keys: ['Espace'], desc: 'Lancer / Pause simulation' },
+  { group: t.scGroup2, items: [
+    { keys: ['Q'], desc: t.scQDesc },
+    { keys: [t.scSpace], desc: t.scSpaceDesc },
   ]},
 ]
 
@@ -504,6 +505,8 @@ function Kbd({ children }) {
 
 function ShortcutsOverlay() {
   const [open, setOpen] = useState(true)
+  const t = useT()
+  const shortcuts = getShortcuts(t)
   return (
     <div style={{
       position: 'absolute', bottom: 14, right: 14, zIndex: 10,
@@ -522,9 +525,9 @@ function ShortcutsOverlay() {
           boxShadow: '0 4px 24px rgba(0,0,0,0.35)',
         }}>
           <div style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 8 }}>
-            Raccourcis
+            {t.scTitle}
           </div>
-          {SHORTCUTS.map(group => (
+          {shortcuts.map(group => (
             <div key={group.group} style={{ marginBottom: 8 }}>
               <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 5 }}>{group.group}</div>
               {group.items.map(item => (
@@ -546,7 +549,7 @@ function ShortcutsOverlay() {
       )}
       <button
         onClick={() => setOpen(o => !o)}
-        title={open ? 'Masquer les raccourcis' : 'Afficher les raccourcis'}
+        title={open ? t.scHide : t.scShow}
         style={{
           pointerEvents: 'auto',
           width: 32, height: 32, borderRadius: 8,
