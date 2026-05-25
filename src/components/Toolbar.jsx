@@ -24,9 +24,23 @@ function saveToFile(robots, obstacles, meta) {
   a.click()
 }
 
-function pickWebmMime() {
-  const candidates = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm']
+// Prefer MP4/H.264 (WhatsApp-compatible) when the browser supports it,
+// fall back to WebM otherwise.
+function pickRecordingMime() {
+  const candidates = [
+    'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+    'video/mp4;codecs=avc1.42E01E',
+    'video/mp4;codecs=avc1',
+    'video/mp4',
+    'video/webm;codecs=vp9',
+    'video/webm;codecs=vp8',
+    'video/webm',
+  ]
   return candidates.find(t => window.MediaRecorder?.isTypeSupported(t)) || ''
+}
+
+function extForMime(mime) {
+  return mime.startsWith('video/mp4') ? 'mp4' : 'webm'
 }
 
 function lastWaypointTime(robots) {
@@ -133,7 +147,7 @@ export default function Toolbar() {
     const blob = new Blob(chunksRef.current, { type: mime })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
-    a.download = `pamis_recording_${new Date().toISOString().slice(0,16).replace('T','_').replace(':','h')}.webm`
+    a.download = `pamis_recording_${new Date().toISOString().slice(0,16).replace('T','_').replace(':','h')}.${extForMime(mime)}`
     a.click()
     setTimeout(() => URL.revokeObjectURL(a.href), 5000)
     recorderRef.current = null
@@ -145,7 +159,7 @@ export default function Toolbar() {
     if (!window.MediaRecorder) { alert('MediaRecorder API not supported in this browser.'); return }
     const canvas = document.querySelector('canvas')
     if (!canvas) return
-    const mime = pickWebmMime()
+    const mime = pickRecordingMime()
     let stream
     try { stream = canvas.captureStream(30) } catch { alert('Canvas capture not supported.'); return }
     const rec = new MediaRecorder(stream, { mimeType: mime || undefined, videoBitsPerSecond: 5_000_000 })
