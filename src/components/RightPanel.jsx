@@ -238,7 +238,7 @@ function SegRow({ seg, idx, robotColor, t, onRemove }) {
   )
 }
 
-function RobotTrajectory({ robot, defaultOpen, onPauseChange, onHeadingChange, onRemoveWaypoint, t }) {
+function RobotTrajectory({ robot, defaultOpen, onPauseChange, onActionPauseChange, onHeadingChange, onRemoveWaypoint, t }) {
   const [open, setOpen] = useState(defaultOpen)
   const segments = useMemo(() => computeSegments(robot), [robot])
   const totalDistMm = segments.reduce((a,s) => a + s.dist, 0)
@@ -298,6 +298,12 @@ function RobotTrajectory({ robot, defaultOpen, onPauseChange, onHeadingChange, o
                           <PauseInput value={robot.waypoints[i]?.pause ?? 0} onChange={v => onPauseChange(i, v)} />
                         </div>
                       )}
+                      {onActionPauseChange && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                          <span style={{ fontSize: 11, color: '#9b72f5', flex: 1, fontWeight: 500 }}>💪 Action</span>
+                          <PauseInput value={robot.waypoints[i]?.actionPause ?? 0} onChange={v => onActionPauseChange(i, v)} />
+                        </div>
+                      )}
                       {onHeadingChange && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
                           <span style={{ fontSize: 11, color: 'var(--text3)', flex: 1, fontWeight: 400 }}>{t.arrivalHeading}</span>
@@ -319,6 +325,7 @@ function RobotTrajectory({ robot, defaultOpen, onPauseChange, onHeadingChange, o
 export default function RightPanel() {
   const t = useT()
   const updateWaypointPause = useSimStore(s => s.updateWaypointPause)
+  const updateWaypointActionPause = useSimStore(s => s.updateWaypointActionPause)
   const updateWaypointHeading = useSimStore(s => s.updateWaypointHeading)
   const removeWaypoint  = useSimStore(s => s.removeWaypoint)
   const robots          = useSimStore(s => s.robots)
@@ -441,6 +448,7 @@ export default function RightPanel() {
           key={r.id} robot={r} t={t}
           defaultOpen={r.id === selectedRobotId || robots.length === 1}
           onPauseChange={(idx, v) => updateWaypointPause(r.id, idx, v)}
+          onActionPauseChange={(idx, v) => updateWaypointActionPause(r.id, idx, v)}
           onHeadingChange={(idx, v) => updateWaypointHeading(r.id, idx, v)}
           onRemoveWaypoint={idx => { pushHistory({ robots, obstacles }); removeWaypoint(r.id, idx) }}
         />

@@ -1,4 +1,4 @@
-# TURBO PAMIS SIMULATOR 2000 v1.2
+# TURBO PAMIS SIMULATOR 2000 v1.3
 
 Simulateur de trajectoires de robots pour la **Coupe de France de Robotique**.  
 Permet de planifier, visualiser et exporter les trajectoires de plusieurs robots sur une table 3×2 m.
@@ -10,15 +10,20 @@ Permet de planifier, visualiser et exporter les trajectoires de plusieurs robots
 ### Robots
 - Ajout de plusieurs robots — couleur, nom, dimensions / Add multiple robots — color, name, dimensions
 - Tracé de trajectoire par clic (mode **Tracer** / **Draw**)
+- **Insertion de waypoint** entre deux existants : cliquer sur le segment de trajectoire en mode Tracer
+- Suppression de waypoint : cliquer sur le cercle du waypoint en mode Tracer
 - Déplacement de robots et waypoints par glisser-déposer (mode **Déplacer** / **Move**)
 - Snap angulaire à 15° en maintenant **Ctrl** lors du déplacement d'un waypoint
+- **Numéros de waypoints** affichés sur la timeline au-dessus de chaque repère
 
 ### Cinématique / Kinematics
 - Profil de vitesse **trapézoïdal** (accél. / décél.) — mode *Stop aux waypoints*
 - Mode **Continu** (vitesse constante entre waypoints)
+- Mode **Holonome** : déplacement et rotation simultanés, cap d'arrivée configurable par waypoint
 - Vitesse et accélération **linéaires** indépendantes (mm/s ou m/s)
 - Vitesse et accélération **angulaires** indépendantes (°/s ou rad/s)
 - **Pause** configurable à chaque waypoint (panneau droit)
+- **Pause Action** 💪 : pause pendant laquelle un émoji biceps clignote sur le robot — configurable par waypoint (panneau droit)
 - Délai de départ par robot
 
 ### Détection de collisions / Collision detection
@@ -103,7 +108,8 @@ npm run dev
     "speed": 0.3, "accel": 1.0, "rotSpeed": 90, "rotAccel": 360,
     "waypointMode": "stop", "collisionShape": "circle",
     "width": 0.2, "height": 0.2, "radius": 0.14, "opacity": 1.0,
-    "startDelay": 0, "waypoints": [{ "x": 1.0, "y": 1.0, "pause": 0 }]
+    "startDelay": 0, "holonomic": false,
+    "waypoints": [{ "x": 1.0, "y": 1.0, "pause": 0, "actionPause": 0 }]
   }],
   "obstacles": []
 }

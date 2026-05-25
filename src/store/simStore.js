@@ -170,6 +170,11 @@ export function getRobotPose(robot, t) {
       if (elapsed + pause >= et) return { x:px, y:py, heading, done:false }
       elapsed += pause
     }
+    const actionPause = wps[i].actionPause ?? 0
+    if (actionPause > 0) {
+      if (elapsed + actionPause >= et) return { x:px, y:py, heading, done:false, inAction:true }
+      elapsed += actionPause
+    }
   }
   return { x:px, y:py, heading, done:true }
 }
@@ -239,8 +244,9 @@ export function computeSegments(robot) {
       arrRotDuration:Math.round(arrRotDur*100)/100,
       arrHeading: wpHeading ?? null,
       pause:pts[i+1].pause??0,
+      actionPause:pts[i+1].actionPause??0,
     })
-    cum += rotDur + dur + arrRotDur + (pts[i+1].pause??0)
+    cum += rotDur + dur + arrRotDur + (pts[i+1].pause??0) + (pts[i+1].actionPause??0)
 
     // Heading pour l'itération suivante
     if (isStop && !isHolo && wpHeading != null) currentHeading = wpHeading
@@ -328,10 +334,12 @@ export const useSimStore = create(immer((set, get) => ({
   setRobotPosition: (id, x, y) => set(s => { const r=s.robots.find(r=>r.id===id); if(r){r.x=x;r.y=y} }),
 
   addWaypoint:    (id, x, y) => set(s => { const r=s.robots.find(r=>r.id===id); if(r) r.waypoints.push({x,y,pause:0}) }),
+  insertWaypoint: (id, idx, x, y) => set(s => { const r=s.robots.find(r=>r.id===id); if(r) r.waypoints.splice(idx,0,{x,y,pause:0}) }),
   removeWaypoint: (id, idx)  => set(s => { const r=s.robots.find(r=>r.id===id); if(r) r.waypoints.splice(idx,1) }),
   clearWaypoints: (id)       => set(s => { const r=s.robots.find(r=>r.id===id); if(r) r.waypoints=[] }),
   moveWaypoint:   (id, idx, x, y) => set(s => { const r=s.robots.find(r=>r.id===id); if(r&&r.waypoints[idx]){r.waypoints[idx].x=x;r.waypoints[idx].y=y} }),
   updateWaypointPause: (id, idx, pause) => set(s => { const r=s.robots.find(r=>r.id===id); if(r&&r.waypoints[idx]) r.waypoints[idx].pause=pause }),
+  updateWaypointActionPause: (id, idx, ap) => set(s => { const r=s.robots.find(r=>r.id===id); if(r&&r.waypoints[idx]) r.waypoints[idx].actionPause=ap }),
   updateWaypointHeading: (id, idx, heading) => set(s => { const r=s.robots.find(r=>r.id===id); if(r&&r.waypoints[idx]) { if(heading==null) delete r.waypoints[idx].heading; else r.waypoints[idx].heading=heading } }),
   setStlData: (id, buf) => { stlCache.set(id, buf); set(s => { const r=s.robots.find(r=>r.id===id); if(r){r.hasStl=true;r.shapeType='stl'} }) },
 

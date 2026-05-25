@@ -121,7 +121,7 @@ function useStlGeo(robotId, hasStl, width) {
 }
 
 // ── Trajectoire ──
-function TrajectoryLine({ robot, selected, simTime, onWaypointClick, onWaypointDown }) {
+function TrajectoryLine({ robot, selected, simTime, onWaypointClick, onWaypointDown, onSegmentClick }) {
   const pts = useMemo(() => {
     const arr=[new THREE.Vector3(robot.x-1.5,robot.y-1.0,0.006)]
     for (const wp of robot.waypoints) arr.push(new THREE.Vector3(wp.x-1.5,wp.y-1.0,0.006))
@@ -133,6 +133,20 @@ function TrajectoryLine({ robot, selected, simTime, onWaypointClick, onWaypointD
     <group>
       <Line points={pts.map(p=>[p.x,p.y,p.z])} color={robot.color}
         lineWidth={selected?3:1.8} transparent opacity={selected?1:.55} />
+      {/* Zones cliquables sur les segments pour insérer un waypoint */}
+      {pts.slice(0,-1).map((p,i) => {
+        const np=pts[i+1]
+        const mid=new THREE.Vector3().lerpVectors(p,np,0.5)
+        const dist=p.distanceTo(np)
+        const angle=Math.atan2(np.y-p.y,np.x-p.x)
+        return (
+          <mesh key={`seg${i}`} position={[mid.x,mid.y,0.020]} rotation={[0,0,angle]}
+            onClick={e=>{e.stopPropagation();onSegmentClick?.(i,e.point.x+1.5,e.point.y+1.0)}}>
+            <planeGeometry args={[dist,0.07]} />
+            <meshBasicMaterial transparent opacity={0} />
+          </mesh>
+        )
+      })}
       {robot.waypoints.map((wp,i) => (
         <group key={i}>
           <mesh position={[wp.x-1.5,wp.y-1.0,0.030]}
@@ -142,9 +156,16 @@ function TrajectoryLine({ robot, selected, simTime, onWaypointClick, onWaypointD
             <meshBasicMaterial color={robot.color} transparent opacity={.9} />
           </mesh>
           {(wp.pause??0)>0 && (
-            <Html position={[wp.x-1.5,wp.y-1.0+0.08,0.031]} center>
+            <Html position={[wp.x-1.5,wp.y-1.0+0.09,0.031]} center>
               <div style={{ fontSize:10, background:'#f08c00', color:'#fff', padding:'1px 5px', borderRadius:3, whiteSpace:'nowrap' }}>
                 ⏱ {wp.pause}s
+              </div>
+            </Html>
+          )}
+          {(wp.actionPause??0)>0 && (
+            <Html position={[wp.x-1.5,wp.y-1.0-0.09,0.031]} center>
+              <div style={{ fontSize:10, background:'#7048e8', color:'#fff', padding:'1px 5px', borderRadius:3, whiteSpace:'nowrap' }}>
+                💪 {wp.actionPause}s
               </div>
             </Html>
           )}
@@ -161,6 +182,12 @@ function TrajectoryLine({ robot, selected, simTime, onWaypointClick, onWaypointD
       })}
     </group>
   )
+}
+
+function BlinkingEmoji() {
+  const [vis, setVis] = useState(true)
+  useEffect(() => { const id = setInterval(() => setVis(v => !v), 500); return () => clearInterval(id) }, [])
+  return <div style={{ fontSize: 28, userSelect: 'none', lineHeight: 1 }}>{vis ? '💪' : ''}</div>
 }
 
 // ── Robot ──
@@ -214,6 +241,11 @@ function RobotMesh({ robot, selected, simTime, onPointerDown, is3d }) {
           {robot.name}
         </div>
       </Html>
+      {pose.inAction && (
+        <Html position={[0,0,is3d?robotH:0.12]} center>
+          <BlinkingEmoji />
+        </Html>
+      )}
     </group>
   )
 }
@@ -295,7 +327,7 @@ function Scene(props) {
     showGrid, gridColor, gridMinorStep, gridMajorStep, bgImage, viewportColor, canvasBgColor,
     tableW, tableH, mode, viewMode,
     selectRobot, selectObstacle, setRobotPosition, setObstaclePosition,
-    removeWaypoint, moveWaypoint, updateWaypointPause, onTableClick } = props
+    removeWaypoint, moveWaypoint, updateWaypointPause, insertWaypoint, onTableClick } = props
 
   const { camera, gl } = useThree()
   const dragTarget = useRef(null)
@@ -410,7 +442,8 @@ function Scene(props) {
       {robots.map(r => (
         <TrajectoryLine key={`t_${r.id}`} robot={r} selected={r.id===selectedRobotId} simTime={simTime}
           onWaypointClick={idx=>{ if(mode==='draw'){pushHistory({robots,obstacles});removeWaypoint(r.id,idx)} }}
-          onWaypointDown={idx=>{ if(mode==='move'){pushHistory({robots,obstacles});dragTarget.current={type:'wp',id:r.id,idx}} }} />
+          onWaypointDown={idx=>{ if(mode==='move'){pushHistory({robots,obstacles});dragTarget.current={type:'wp',id:r.id,idx}} }}
+          onSegmentClick={(segIdx,wx,wy)=>{ if(mode==='draw'){pushHistory({robots,obstacles});insertWaypoint(r.id,segIdx,clamp(wx,tableW),clamp(wy,tableH))} }} />
       ))}
 
       {collisions.map((c,i)    => <CollisionMarker key={`rr${i}`} cx={c.x} cy={c.y} color="#dc2626" />)}
@@ -429,8 +462,6 @@ const SHORTCUTS = [
     { keys: ['Molette'], desc: 'Zoom' },
   ]},
   { group: 'Clavier', items: [
-    { keys: ['Ctrl', 'Z'], desc: 'Annuler' },
-    { keys: ['Ctrl', 'Y'], desc: 'Rétablir' },
     { keys: ['Espace'], desc: 'Lancer / Pause simulation' },
   ]},
 ]
@@ -527,6 +558,7 @@ export default function SimCanvas({ onTableClick }) {
           setRobotPosition={s.setRobotPosition} setObstaclePosition={s.setObstaclePosition}
           removeWaypoint={s.removeWaypoint} moveWaypoint={s.moveWaypoint}
           updateWaypointPause={s.updateWaypointPause}
+          insertWaypoint={s.insertWaypoint}
           onTableClick={onTableClick}
         />
       </Canvas>

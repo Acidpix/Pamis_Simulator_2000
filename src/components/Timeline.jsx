@@ -159,7 +159,13 @@ export default function Timeline() {
                           position: 'absolute', left: `${wpPct}%`, top: 2, bottom: 2, width: 2,
                           background: rt.color, opacity: 0.95, borderRadius: 1, zIndex: 1,
                           transform: 'translateX(-50%)', boxShadow: `0 0 4px ${rt.color}`,
-                        }} />
+                        }}>
+                          <div style={{
+                            position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)',
+                            fontSize: 8, fontWeight: 800, color: rt.color, lineHeight: 1, marginBottom: 1,
+                            whiteSpace: 'nowrap', pointerEvents: 'none',
+                          }}>{wi + 1}</div>
+                        </div>
                       )
                     })}
                     <div style={{
