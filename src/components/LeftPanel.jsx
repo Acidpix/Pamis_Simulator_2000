@@ -219,6 +219,7 @@ function RobotProps({ robot, onUpdate, robots, obstacles, stlRef }) {
             options={[{ v:'stop', label:'⏸ Stop aux pts' }, { v:'continuous', label:'→ Continu' }]}
             onChange={v => ur({ waypointMode: v })} />
         </Field>
+        <Toggle value={!!robot.holonomic} onChange={v => ur({ holonomic: v })} label="Holonome (ne tourne pas)" />
         <Field label="Orientation de départ">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <input type="range" min={0} max={359} step={1} value={norm360(robot.heading)}
@@ -400,6 +401,7 @@ export default function LeftPanel() {
       rotSpeed: robot.rotSpeed, rotAccel: robot.rotAccel,
       heading: robot.heading, startDelay: robot.startDelay,
       waypointMode: robot.waypointMode,
+      holonomic: robot.holonomic,
       collisionShape: robot.collisionShape,
       opacity: robot.opacity,
     })

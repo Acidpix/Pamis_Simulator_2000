@@ -31,6 +31,7 @@ function makeRobot(ov = {}) {
     accel: 1.0,         // m/s²
     rotSpeed: 90,       // deg/s  (vitesse de rotation)
     rotAccel: 360,      // deg/s² (accélération angulaire)
+    holonomic: false,   // si true, ne tourne pas avant de se déplacer
     waypointMode: 'stop',
     shapeType: 'rect',
     collisionShape: 'circle',
@@ -91,6 +92,7 @@ export function getRobotPose(robot, t) {
 
   let elapsed = 0, px = robot.x, py = robot.y, heading = robot.heading
   const isStop = (robot.waypointMode ?? 'stop') === 'stop'
+  const isHolo = !!robot.holonomic
   const rotSpeedRad = (robot.rotSpeed ?? 90) * DEG
   const rotAccelRad = (robot.rotAccel ?? 360) * DEG
 
@@ -98,10 +100,11 @@ export function getRobotPose(robot, t) {
     const dx = wps[i].x-px, dy = wps[i].y-py
     const dist = Math.hypot(dx, dy)
     const targetAngle = Math.atan2(dy, dx) / DEG
+    const wpHeading = wps[i].heading
 
     if (dist > 1e-6) {
-      // ── Phase rotation (mode stop uniquement) ──
-      if (isStop) {
+      // ── Phase 1: rotation initiale (stop, non-holo) ──
+      if (isStop && !isHolo) {
         const da = normAngle(targetAngle - heading)
         const absDaRad = Math.abs(da) * DEG
         if (absDaRad > 0.5 * DEG) {
@@ -116,16 +119,50 @@ export function getRobotPose(robot, t) {
         heading = targetAngle
       }
 
-      // ── Phase déplacement linéaire ──
-      const segDur = isStop ? trapDuration(dist, robot.speed, robot.accel??1) : dist/robot.speed
+      // ── Phase 2: déplacement (+ rotation parallèle si holonome) ──
+      const motionDur = isStop ? trapDuration(dist, robot.speed, robot.accel??1) : dist/robot.speed
+      let holoDa = 0, holoDur = 0
+      if (isHolo && wpHeading != null) {
+        holoDa = normAngle(wpHeading - heading)
+        const absDaRad = Math.abs(holoDa) * DEG
+        if (absDaRad > 0.5 * DEG) holoDur = trapDuration(absDaRad, rotSpeedRad, rotAccelRad)
+      }
+      const segDur = Math.max(motionDur, holoDur)
       if (elapsed + segDur >= et) {
         const lt = et - elapsed
-        const p = isStop ? trapPos(dist, robot.speed, robot.accel??1, lt) : Math.min(dist, robot.speed*lt)
+        const motionLt = Math.min(lt, motionDur)
+        const p = isStop ? trapPos(dist, robot.speed, robot.accel??1, motionLt) : Math.min(dist, robot.speed*motionLt)
         const frac = p/dist
-        return { x:px+dx*frac, y:py+dy*frac, heading:targetAngle, done:false }
+        let h
+        if (isHolo) {
+          if (holoDur > 0) {
+            const rotLt = Math.min(lt, holoDur)
+            const rotated = trapPos(Math.abs(holoDa)*DEG, rotSpeedRad, rotAccelRad, rotLt) / DEG
+            h = heading + rotated * Math.sign(holoDa)
+          } else h = heading
+        } else h = targetAngle
+        return { x:px+dx*frac, y:py+dy*frac, heading: h, done:false }
       }
       elapsed += segDur
-      px = wps[i].x; py = wps[i].y; heading = targetAngle
+      px = wps[i].x; py = wps[i].y
+      if (isHolo) { if (holoDur > 0) heading = heading + holoDa }
+      else heading = targetAngle
+    }
+
+    // ── Phase 3: rotation d'arrivée (stop, non-holo, heading spécifié) ──
+    if (isStop && !isHolo && wpHeading != null) {
+      const da = normAngle(wpHeading - heading)
+      const absDaRad = Math.abs(da) * DEG
+      if (absDaRad > 0.5 * DEG) {
+        const arrRotDur = trapDuration(absDaRad, rotSpeedRad, rotAccelRad)
+        if (elapsed + arrRotDur >= et) {
+          const lt = et - elapsed
+          const rotated = trapPos(absDaRad, rotSpeedRad, rotAccelRad, lt) / DEG
+          return { x:px, y:py, heading: heading + rotated * Math.sign(da), done:false }
+        }
+        elapsed += arrRotDur
+        heading = heading + da
+      }
     }
 
     const pause = wps[i].pause ?? 0
@@ -143,6 +180,7 @@ export function computeSegments(robot) {
   let cum = robot.startDelay
   let currentHeading = robot.heading
   const isStop = (robot.waypointMode??'stop') === 'stop'
+  const isHolo = !!robot.holonomic
   const rotSpeedRad = (robot.rotSpeed ?? 90) * DEG
   const rotAccelRad = (robot.rotAccel ?? 360) * DEG
 
@@ -150,13 +188,39 @@ export function computeSegments(robot) {
     const dx = pts[i+1].x-pts[i].x, dy = pts[i+1].y-pts[i].y
     const dist = Math.hypot(dx, dy)
     const angle = Math.atan2(dy, dx) / DEG
-    const dur = isStop ? trapDuration(dist, robot.speed, robot.accel??1) : dist/robot.speed
+    const wpHeading = pts[i+1].heading
+    const motionDur = isStop ? trapDuration(dist, robot.speed, robot.accel??1) : dist/robot.speed
 
+    // Rotation initiale (stop, non-holo)
     let rotDur = 0
-    if (isStop && dist > 1e-6) {
+    if (isStop && !isHolo && dist > 1e-6) {
       const da = normAngle(angle - currentHeading)
       const absDaRad = Math.abs(da) * DEG
       if (absDaRad > 0.5 * DEG) rotDur = trapDuration(absDaRad, rotSpeedRad, rotAccelRad)
+    }
+    const headingAfterInit = (isStop && !isHolo && dist > 1e-6) ? angle : currentHeading
+
+    // Rotation holonome pendant le déplacement
+    let holoDur = 0
+    if (isHolo && dist > 1e-6 && wpHeading != null) {
+      const da = normAngle(wpHeading - currentHeading)
+      const absDaRad = Math.abs(da) * DEG
+      if (absDaRad > 0.5 * DEG) holoDur = trapDuration(absDaRad, rotSpeedRad, rotAccelRad)
+    }
+    const dur = Math.max(motionDur, holoDur)
+
+    // Heading après la phase de déplacement
+    let headingAfterMotion
+    if (isHolo) headingAfterMotion = (wpHeading != null && dist > 1e-6) ? wpHeading : currentHeading
+    else if (dist > 1e-6) headingAfterMotion = angle
+    else headingAfterMotion = currentHeading
+
+    // Rotation d'arrivée (stop, non-holo)
+    let arrRotDur = 0
+    if (isStop && !isHolo && wpHeading != null) {
+      const da = normAngle(wpHeading - headingAfterMotion)
+      const absDaRad = Math.abs(da) * DEG
+      if (absDaRad > 0.5 * DEG) arrRotDur = trapDuration(absDaRad, rotSpeedRad, rotAccelRad)
     }
 
     let rel = null
@@ -172,10 +236,16 @@ export function computeSegments(robot) {
       startTime:Math.round(cum*100)/100,
       rotDuration:Math.round(rotDur*100)/100,
       duration:Math.round(dur*100)/100,
+      arrRotDuration:Math.round(arrRotDur*100)/100,
+      arrHeading: wpHeading ?? null,
       pause:pts[i+1].pause??0,
     })
-    cum += rotDur + dur + (pts[i+1].pause??0)
-    if (isStop && dist > 1e-6) currentHeading = angle
+    cum += rotDur + dur + arrRotDur + (pts[i+1].pause??0)
+
+    // Heading pour l'itération suivante
+    if (isStop && !isHolo && wpHeading != null) currentHeading = wpHeading
+    else if (isHolo && wpHeading != null && dist > 1e-6) currentHeading = wpHeading
+    else if (!isHolo && dist > 1e-6) currentHeading = angle
   }
   return segs
 }
@@ -262,6 +332,7 @@ export const useSimStore = create(immer((set, get) => ({
   clearWaypoints: (id)       => set(s => { const r=s.robots.find(r=>r.id===id); if(r) r.waypoints=[] }),
   moveWaypoint:   (id, idx, x, y) => set(s => { const r=s.robots.find(r=>r.id===id); if(r&&r.waypoints[idx]){r.waypoints[idx].x=x;r.waypoints[idx].y=y} }),
   updateWaypointPause: (id, idx, pause) => set(s => { const r=s.robots.find(r=>r.id===id); if(r&&r.waypoints[idx]) r.waypoints[idx].pause=pause }),
+  updateWaypointHeading: (id, idx, heading) => set(s => { const r=s.robots.find(r=>r.id===id); if(r&&r.waypoints[idx]) { if(heading==null) delete r.waypoints[idx].heading; else r.waypoints[idx].heading=heading } }),
   setStlData: (id, buf) => { stlCache.set(id, buf); set(s => { const r=s.robots.find(r=>r.id===id); if(r){r.hasStl=true;r.shapeType='stl'} }) },
 
   obstacles: [], selectedObsId: null,
