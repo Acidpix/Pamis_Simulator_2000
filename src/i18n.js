@@ -59,9 +59,9 @@ const T = {
     hint: '300×200cm • Ctrl+drag = snap 15°',
     clearTable: '🗑 Effacer la table',
     clearTableHold: 'Maintenir 3 s pour effacer la sauvegarde automatique.',
-    clearTableDone: '✓ Mémoire effacée',
+    clearTableDone: '✓ Table effacée',
     clearTableHolding: 'Maintenez…',
-    autoSave: 'Sauvegarde auto',
+    autoSave: 'Reset Table',
     // RightPanel
     collRobotLabel: n => `⚠ ${n} collision${n>1?'s':''} robot-robot`,
     collObsLabel:   n => `⚠ ${n} collision${n>1?'s':''} robot-obstacle`,
@@ -148,9 +148,9 @@ const T = {
     hint: '300×200cm • Ctrl+drag = snap 15°',
     clearTable: '🗑 Clean Table',
     clearTableHold: 'Hold 3 s to clear the auto-save.',
-    clearTableDone: '✓ Memory cleared',
+    clearTableDone: '✓ Table cleared',
     clearTableHolding: 'Hold…',
-    autoSave: 'Auto-save',
+    autoSave: 'Reset Table',
     // RightPanel
     collRobotLabel: n => `⚠ ${n} robot-robot collision${n>1?'s':''}`,
     collObsLabel:   n => `⚠ ${n} robot-obstacle collision${n>1?'s':''}`,

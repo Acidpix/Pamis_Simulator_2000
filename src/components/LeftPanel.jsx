@@ -287,44 +287,51 @@ function RobotProps({ robot, onUpdate, robots, obstacles, stlRef }) {
 function ClearAutosaveBtn({ t }) {
   const holdRef = useRef(null)
   const [progress, setProgress] = useState(0)
-  const [done, setDone] = useState(false)
 
   const stop = () => { clearInterval(holdRef.current); setProgress(0) }
   const onDown = () => {
-    setDone(false)
     const start = Date.now()
     holdRef.current = setInterval(() => {
       const p = Math.min(1, (Date.now() - start) / 3000)
       setProgress(p)
-      if (p >= 1) { clearInterval(holdRef.current); clearAutosave(); setProgress(0); setDone(true) }
+      if (p >= 1) { clearInterval(holdRef.current); clearAutosave(); window.location.reload() }
     }, 50)
   }
 
-  const label = done ? t.clearTableDone : progress > 0 ? t.clearTableHolding : t.clearTable
-
   return (
-    <div style={{ marginTop: 14 }}>
-      <Label>{t.autoSave}</Label>
+    <div style={{
+      margin: '10px 0 4px',
+      borderRadius: 'var(--r2)',
+      border: '1px solid var(--red)55',
+      background: 'var(--red)0d',
+      padding: '10px 12px',
+    }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--red)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <span>⚠</span> {t.autoSave}
+      </div>
       <button
         onMouseDown={onDown} onMouseUp={stop} onMouseLeave={stop}
         onTouchStart={onDown} onTouchEnd={stop}
         style={{
-          width: '100%', padding: '7px 10px', borderRadius: 'var(--r)',
-          border: `1px solid ${done ? 'var(--green)' : 'var(--red)66'}`,
-          background: done ? 'var(--green)18' : `var(--red)18`,
-          color: done ? 'var(--green)' : 'var(--red)',
-          fontSize: 12, fontWeight: 700, cursor: 'pointer',
+          width: '100%', padding: '9px 12px', borderRadius: 'var(--r)',
+          border: '1px solid var(--red)88',
+          background: progress > 0 ? 'var(--red)' : 'var(--red)22',
+          color: progress > 0 ? '#fff' : 'var(--red)',
+          fontSize: 13, fontWeight: 700, cursor: 'pointer',
           position: 'relative', overflow: 'hidden', userSelect: 'none',
-          textAlign: 'left',
+          textAlign: 'center', transition: 'color .1s, background .1s',
         }}
       >
         <div style={{
           position: 'absolute', left: 0, top: 0, bottom: 0,
-          width: `${progress * 100}%`, background: 'var(--red)', opacity: 0.18,
+          width: `${progress * 100}%`, background: 'var(--red)', opacity: 0.35,
+          transition: 'none',
         }} />
-        <span style={{ position: 'relative' }}>{label}</span>
+        <span style={{ position: 'relative' }}>
+          {progress > 0 ? t.clearTableHolding : t.clearTable}
+        </span>
       </button>
-      <p style={{ fontSize: 10, color: 'var(--text3)', marginTop: 4 }}>{t.clearTableHold}</p>
+      <p style={{ fontSize: 10, color: 'var(--text3)', marginTop: 6, lineHeight: 1.4 }}>{t.clearTableHold}</p>
     </div>
   )
 }
@@ -627,6 +634,7 @@ export default function LeftPanel() {
 
           {/* ── Tab Scène ── */}
           {tab === 'scene' && (
+            <>
             <SectionCard accent="var(--green)">
               <div style={{ padding: '9px 12px 12px' }}>
                 <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--green)', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 12 }}>
@@ -670,9 +678,10 @@ export default function LeftPanel() {
                   </Field>
                 </div>
                 <p style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4 }}>300×200cm • Ctrl+drag = snap 15°</p>
-                <ClearAutosaveBtn t={t} />
               </div>
             </SectionCard>
+            <ClearAutosaveBtn t={t} />
+            </>
           )}
         </div>
       </div>

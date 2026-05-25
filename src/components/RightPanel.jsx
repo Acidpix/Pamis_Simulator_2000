@@ -271,9 +271,9 @@ function RobotTrajectory({ robot, defaultOpen, onPauseChange, onActionPauseChang
         </span>
         <span style={{ fontSize: 12, color: 'var(--text3)', fontWeight: 400, flexShrink: 0 }}>{totalDistMm} mm</span>
         <span style={{ fontSize: 12, color: 'var(--text3)', fontWeight: 400, flexShrink: 0 }}>{totalTime.toFixed(1)} s</span>
-        <span style={{ fontSize: 10, color: 'var(--text3)', marginLeft: 2 }}>{open ? '▾' : '▸'}</span>
+        <span style={{ fontSize: 28, color: 'var(--text3)', marginLeft: 0, height: 20, position: 'relative', top: -8 }}>{open ? '▾' : '▸'}</span>
       </div>
-
+  top: -8px;
       {open && (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, padding: '10px 12px', borderBottom: '1px solid var(--border)' }}>

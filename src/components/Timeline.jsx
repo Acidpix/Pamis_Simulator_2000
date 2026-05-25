@@ -127,7 +127,7 @@ export default function Timeline() {
 
       {/* ── Pistes robot ── */}
       {hasRobots && (
-        <div style={{ padding: '6px 16px 0', maxHeight: 5 * (TRACK_H + 4) + 14, overflowY: 'auto' }}>
+        <div style={{ padding: '18px 16px 0', maxHeight: 5 * (TRACK_H + 4) + 28, overflowY: 'auto', overflowX: 'visible' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {robotTimelines.map(rt => {
               const startPct = simMaxTime > 0 ? (rt.start / simMaxTime) * 100 : 0
@@ -161,10 +161,12 @@ export default function Timeline() {
                           transform: 'translateX(-50%)', boxShadow: `0 0 4px ${rt.color}`,
                         }}>
                           <div style={{
-                            position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)',
-                            fontSize: 10, fontWeight: 800, color: '#fff', lineHeight: 1, marginBottom: 2,
-                            background: rt.color, padding: '1px 4px', borderRadius: 3,
-                            whiteSpace: 'nowrap', pointerEvents: 'none', boxShadow: '0 1px 4px rgba(0,0,0,.3)',
+                            position: 'absolute', bottom: 'calc(100% + 3px)', left: '50%', transform: 'translateX(-50%)',
+                            fontSize: 11, fontWeight: 900, color: '#fff', lineHeight: 1,
+                            background: rt.color, padding: '2px 5px', borderRadius: 4,
+                            whiteSpace: 'nowrap', pointerEvents: 'none',
+                            boxShadow: `0 1px 6px ${rt.color}80, 0 1px 3px rgba(0,0,0,.4)`,
+                            letterSpacing: '-.01em',
                           }}>{wi + 1}</div>
                         </div>
                       )
@@ -233,7 +235,7 @@ export default function Timeline() {
             <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 1 }}>
               Écoulé
             </div>
-            <div className="tabular" style={{ fontSize: 28, fontWeight: 900, color: 'var(--accent)', lineHeight: 1 }}>
+            <div style={{ fontSize: 28, fontWeight: 900, color: 'var(--accent)', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
               {simTime.toFixed(1)}<span style={{ fontSize: 14, fontWeight: 600, marginLeft: 2, color: 'var(--text3)' }}>s</span>
             </div>
           </div>
