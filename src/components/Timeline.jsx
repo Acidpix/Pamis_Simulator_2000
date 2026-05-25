@@ -85,8 +85,8 @@ export default function Timeline() {
   const robotTimelines = useMemo(() => robots.map(r => {
     const segs = computeSegments(r)
     const start = r.startDelay ?? 0
-    const duration = segs.reduce((a, s) => a + s.duration + s.rotDuration + (s.pause ?? 0), 0)
-    const waypointTimes = segs.map(seg => seg.startTime + seg.rotDuration + seg.duration)
+    const duration = segs.reduce((a, s) => a + s.rotDuration + s.duration + (s.arrRotDuration ?? 0) + (s.pause ?? 0) + (s.actionPause ?? 0), 0)
+    const waypointTimes = segs.map(seg => seg.startTime + seg.rotDuration + seg.duration + (seg.arrRotDuration ?? 0))
     return { id: r.id, name: r.name, color: r.color, start, end: start + duration, waypointTimes }
   }), [robots])
 
@@ -162,8 +162,9 @@ export default function Timeline() {
                         }}>
                           <div style={{
                             position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)',
-                            fontSize: 8, fontWeight: 800, color: rt.color, lineHeight: 1, marginBottom: 1,
-                            whiteSpace: 'nowrap', pointerEvents: 'none',
+                            fontSize: 10, fontWeight: 800, color: '#fff', lineHeight: 1, marginBottom: 2,
+                            background: rt.color, padding: '1px 4px', borderRadius: 3,
+                            whiteSpace: 'nowrap', pointerEvents: 'none', boxShadow: '0 1px 4px rgba(0,0,0,.3)',
                           }}>{wi + 1}</div>
                         </div>
                       )

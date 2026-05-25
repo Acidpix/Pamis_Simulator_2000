@@ -1,10 +1,10 @@
-import React, { useCallback } from 'react'
+import React, { useCallback, useEffect } from 'react'
 import SimCanvas from './components/SimCanvas.jsx'
 import LeftPanel from './components/LeftPanel.jsx'
 import RightPanel from './components/RightPanel.jsx'
 import Toolbar from './components/Toolbar.jsx'
 import Timeline from './components/Timeline.jsx'
-import { useSimStore, pushHistory } from './store/simStore.js'
+import { useSimStore, pushHistory, loadAutosave } from './store/simStore.js'
 import { useT } from './i18n.js'
 
 export default function App() {
@@ -15,6 +15,8 @@ export default function App() {
   const mode            = useSimStore(s => s.mode)
   const canvasBgColor   = useSimStore(s => s.canvasBgColor)
   const t = useT()
+
+  useEffect(() => { loadAutosave() }, [])
 
   const handleTableClick = useCallback((tx, ty) => {
     if (mode !== 'draw') return

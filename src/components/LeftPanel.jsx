@@ -1,5 +1,5 @@
 import React, { useRef, useState, useCallback } from 'react'
-import { useSimStore, pushHistory } from '../store/simStore.js'
+import { useSimStore, pushHistory, clearAutosave } from '../store/simStore.js'
 import { useT } from '../i18n.js'
 
 const mToMm = m => Math.round(m * 1000)
@@ -284,10 +284,55 @@ function RobotProps({ robot, onUpdate, robots, obstacles, stlRef }) {
 }
 
 // ── Onglets ──
+function ClearAutosaveBtn({ t }) {
+  const holdRef = useRef(null)
+  const [progress, setProgress] = useState(0)
+  const [done, setDone] = useState(false)
+
+  const stop = () => { clearInterval(holdRef.current); setProgress(0) }
+  const onDown = () => {
+    setDone(false)
+    const start = Date.now()
+    holdRef.current = setInterval(() => {
+      const p = Math.min(1, (Date.now() - start) / 3000)
+      setProgress(p)
+      if (p >= 1) { clearInterval(holdRef.current); clearAutosave(); setProgress(0); setDone(true) }
+    }, 50)
+  }
+
+  const label = done ? t.clearTableDone : progress > 0 ? t.clearTableHolding : t.clearTable
+
+  return (
+    <div style={{ marginTop: 14 }}>
+      <Label>{t.autoSave}</Label>
+      <button
+        onMouseDown={onDown} onMouseUp={stop} onMouseLeave={stop}
+        onTouchStart={onDown} onTouchEnd={stop}
+        style={{
+          width: '100%', padding: '7px 10px', borderRadius: 'var(--r)',
+          border: `1px solid ${done ? 'var(--green)' : 'var(--red)66'}`,
+          background: done ? 'var(--green)18' : `var(--red)18`,
+          color: done ? 'var(--green)' : 'var(--red)',
+          fontSize: 12, fontWeight: 700, cursor: 'pointer',
+          position: 'relative', overflow: 'hidden', userSelect: 'none',
+          textAlign: 'left',
+        }}
+      >
+        <div style={{
+          position: 'absolute', left: 0, top: 0, bottom: 0,
+          width: `${progress * 100}%`, background: 'var(--red)', opacity: 0.18,
+        }} />
+        <span style={{ position: 'relative' }}>{label}</span>
+      </button>
+      <p style={{ fontSize: 10, color: 'var(--text3)', marginTop: 4 }}>{t.clearTableHold}</p>
+    </div>
+  )
+}
+
 const TABS = [
   { id: 'robots',    icon: '🤖', label: 'Robots'    },
   { id: 'obstacles', icon: '🧱', label: 'Obstacles' },
-  { id: 'scene',     icon: '🎨', label: 'Scène'     },
+  { id: 'scene',     icon: '🏁', label: 'Table'     },
 ]
 
 function TabBar({ active, onChange }) {
@@ -625,6 +670,7 @@ export default function LeftPanel() {
                   </Field>
                 </div>
                 <p style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4 }}>300×200cm • Ctrl+drag = snap 15°</p>
+                <ClearAutosaveBtn t={t} />
               </div>
             </SectionCard>
           )}

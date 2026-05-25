@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 
 export const stlCache = new Map()
+export const AUTOSAVE_KEY = 'pamis_autosave'
 
 // ── Undo / Redo ──
 const undoStack = [], redoStack = []
@@ -410,3 +411,37 @@ export const useSimStore = create(immer((set, get) => ({
     s.simTime=0; s.simPlaying=false; s.collisions=[]; s.obsCollisions=[]; s.borderCollisions=[]
   }),
 })))
+
+// ── Auto-save localStorage ──
+let _saveTimer = null
+useSimStore.subscribe(state => {
+  clearTimeout(_saveTimer)
+  _saveTimer = setTimeout(() => {
+    try {
+      localStorage.setItem(AUTOSAVE_KEY, JSON.stringify({
+        version: 2,
+        meta: {
+          simMaxTime: state.simMaxTime, simSpeed: state.simSpeed,
+          gridColor: state.gridColor, gridMinorStep: state.gridMinorStep, gridMajorStep: state.gridMajorStep,
+          viewportColor: state.viewportColor, canvasBgColor: state.canvasBgColor,
+        },
+        robots: state.robots,
+        obstacles: state.obstacles,
+      }))
+    } catch {}
+  }, 600)
+})
+
+export function loadAutosave() {
+  try {
+    const raw = localStorage.getItem(AUTOSAVE_KEY)
+    if (!raw) return false
+    const data = JSON.parse(raw)
+    useSimStore.getState().loadState(data.robots || [], data.obstacles || [], data.meta || {})
+    return true
+  } catch { return false }
+}
+
+export function clearAutosave() {
+  try { localStorage.removeItem(AUTOSAVE_KEY) } catch {}
+}

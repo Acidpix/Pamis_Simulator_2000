@@ -308,14 +308,35 @@ function OrthoZoom({ tableW, tableH }) {
   const zoom = useRef(1)
   useEffect(() => {
     const el = gl.domElement
-    const fn = e => {
+    const fnWheel = e => {
       e.preventDefault()
       zoom.current = Math.max(.3, Math.min(8, zoom.current*(1-e.deltaY*.001)))
       camera.zoom = Math.min(el.clientWidth/tableW, el.clientHeight/tableH)*.9*zoom.current
       camera.updateProjectionMatrix()
     }
-    el.addEventListener('wheel', fn, { passive:false })
-    return () => el.removeEventListener('wheel', fn)
+    let panStart = null
+    const fnDown = e => {
+      if (e.button !== 1) return
+      e.preventDefault()
+      panStart = { x:e.clientX, y:e.clientY, cx:camera.position.x, cy:camera.position.y }
+    }
+    const fnMove = e => {
+      if (!panStart) return
+      const scale = 1 / camera.zoom
+      camera.position.x = panStart.cx - (e.clientX - panStart.x) * scale
+      camera.position.y = panStart.cy + (e.clientY - panStart.y) * scale
+    }
+    const fnUp = e => { if (e.button === 1) panStart = null }
+    el.addEventListener('wheel', fnWheel, { passive:false })
+    el.addEventListener('mousedown', fnDown)
+    window.addEventListener('mousemove', fnMove)
+    window.addEventListener('mouseup', fnUp)
+    return () => {
+      el.removeEventListener('wheel', fnWheel)
+      el.removeEventListener('mousedown', fnDown)
+      window.removeEventListener('mousemove', fnMove)
+      window.removeEventListener('mouseup', fnUp)
+    }
   }, [camera,gl,tableW,tableH])
   return null
 }
@@ -405,7 +426,8 @@ function Scene(props) {
       {is3d ? (
         <>
           <PerspectiveCamera makeDefault position={[0,-0.8,4.5]} fov={42} near={.01} far={50} />
-          <OrbitControls target={[0,0,0]} enablePan enableZoom enableRotate />
+          <OrbitControls target={[0,0,0]} enablePan enableZoom enableRotate
+            mouseButtons={{ LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.PAN, RIGHT: THREE.MOUSE.DOLLY }} />
         </>
       ) : (
         <>
@@ -456,12 +478,15 @@ function Scene(props) {
 const SHORTCUTS = [
   { group: 'Souris', items: [
     { keys: ['Clic table'], desc: 'Ajouter un waypoint (mode Tracer)' },
+    { keys: ['Clic segment'], desc: 'Insérer un waypoint (mode Tracer)' },
     { keys: ['Clic waypoint'], desc: 'Supprimer le waypoint (mode Tracer)' },
     { keys: ['Glisser'], desc: 'Déplacer robot / waypoint (mode Déplacer)' },
     { keys: ['Ctrl', 'Glisser'], desc: 'Snap angle 15°' },
     { keys: ['Molette'], desc: 'Zoom' },
+    { keys: ['Clic molette'], desc: 'Panoramique (2D & 3D)' },
   ]},
   { group: 'Clavier', items: [
+    { keys: ['Q'], desc: 'Basculer mode Tracer / Déplacer' },
     { keys: ['Espace'], desc: 'Lancer / Pause simulation' },
   ]},
 ]

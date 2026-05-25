@@ -1,4 +1,4 @@
-# TURBO PAMIS SIMULATOR 2000 v1.3
+# TURBO PAMIS SIMULATOR 2000 v1.4
 
 Simulateur de trajectoires de robots pour la **Coupe de France de Robotique**.  
 Permet de planifier, visualiser et exporter les trajectoires de plusieurs robots sur une table 3×2 m.
@@ -14,6 +14,8 @@ Permet de planifier, visualiser et exporter les trajectoires de plusieurs robots
 - Suppression de waypoint : cliquer sur le cercle du waypoint en mode Tracer
 - Déplacement de robots et waypoints par glisser-déposer (mode **Déplacer** / **Move**)
 - Snap angulaire à 15° en maintenant **Ctrl** lors du déplacement d'un waypoint
+- Raccourci **Q** : bascule entre les modes Tracer et Déplacer
+- **Clic molette** (2D & 3D) : panoramique de la vue (déplacement gauche/droite/haut/bas)
 - **Numéros de waypoints** affichés sur la timeline au-dessus de chaque repère
 
 ### Cinématique / Kinematics
@@ -39,8 +41,15 @@ Permet de planifier, visualiser et exporter les trajectoires de plusieurs robots
 - Timeline slider + vitesse de lecture ×0.25 à ×4
 - Durée de simulation configurable (5–120 s)
 - Vue **2D** (orthographique) et **3D** (perspective + OrbitControls)
+- Numéros de waypoints lisibles sur la timeline (badges colorés)
+- Calcul du temps total corrigé : rotations d'arrivée et pauses action incluses
 
-### Table & Affichage / Table & Display
+### Sauvegarde automatique / Auto-save
+- **Sauvegarde automatique** dans le navigateur (localStorage) à chaque action — survit aux rafraîchissements et crashes
+- Restauration automatique au démarrage
+- Bouton **🗑 Effacer la sauvegarde** (onglet Table, maintenir 3 s) pour réinitialiser
+
+### Table & Affichage / Table & Display (onglet 🏁 Table)
 - Image de fond par défaut : `public/table_FINALE_1.jpg`
 - Couleur de surface de la table configurable
 - Couleur d'arrière-plan (hors table) configurable

@@ -57,6 +57,11 @@ const T = {
     gridColor: 'Couleur de la grille',
     minorGrid: 'Petite grille', majorGrid: 'Grande grille',
     hint: '300×200cm • Ctrl+drag = snap 15°',
+    clearTable: '🗑 Effacer la table',
+    clearTableHold: 'Maintenir 3 s pour effacer la sauvegarde automatique.',
+    clearTableDone: '✓ Mémoire effacée',
+    clearTableHolding: 'Maintenez…',
+    autoSave: 'Sauvegarde auto',
     // RightPanel
     collRobotLabel: n => `⚠ ${n} collision${n>1?'s':''} robot-robot`,
     collObsLabel:   n => `⚠ ${n} collision${n>1?'s':''} robot-obstacle`,
@@ -141,6 +146,11 @@ const T = {
     gridColor: 'Grid color',
     minorGrid: 'Minor grid', majorGrid: 'Major grid',
     hint: '300×200cm • Ctrl+drag = snap 15°',
+    clearTable: '🗑 Clean Table',
+    clearTableHold: 'Hold 3 s to clear the auto-save.',
+    clearTableDone: '✓ Memory cleared',
+    clearTableHolding: 'Hold…',
+    autoSave: 'Auto-save',
     // RightPanel
     collRobotLabel: n => `⚠ ${n} robot-robot collision${n>1?'s':''}`,
     collObsLabel:   n => `⚠ ${n} robot-obstacle collision${n>1?'s':''}`,

@@ -111,12 +111,14 @@ export default function Toolbar() {
 
   useEffect(() => {
     const onKey = e => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return
       if ((e.ctrlKey||e.metaKey) && e.key==='z' && !e.shiftKey) { e.preventDefault(); undo() }
       if ((e.ctrlKey||e.metaKey) && (e.key==='y'||(e.key==='z'&&e.shiftKey))) { e.preventDefault(); redo() }
+      if (e.key==='q'||e.key==='Q') { setMode(mode==='draw' ? 'move' : 'draw') }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [undo, redo])
+  }, [undo, redo, mode, setMode])
 
   const t = useT()
 

@@ -242,7 +242,7 @@ function RobotTrajectory({ robot, defaultOpen, onPauseChange, onActionPauseChang
   const [open, setOpen] = useState(defaultOpen)
   const segments = useMemo(() => computeSegments(robot), [robot])
   const totalDistMm = segments.reduce((a,s) => a + s.dist, 0)
-  const totalTime   = segments.reduce((a,s) => a + s.duration + s.rotDuration + (s.arrRotDuration||0) + (s.pause||0), 0) + (robot.startDelay ?? 0)
+  const totalTime   = segments.reduce((a,s) => a + s.rotDuration + s.duration + (s.arrRotDuration||0) + (s.pause||0) + (s.actionPause||0), 0) + (robot.startDelay ?? 0)
 
   return (
     <div style={{
