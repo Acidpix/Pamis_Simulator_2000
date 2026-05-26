@@ -188,7 +188,7 @@ function SegRow({ seg, idx, robotColor, t, onRemove }) {
           background: `${accent}28`, color: accent, letterSpacing: '.01em',
         }}>#{idx + 1}</span>
         <span style={{ flex: 1, fontSize: 11, color: 'var(--text2)', fontWeight: 500 }}>
-          départ à <span style={{ color: 'var(--text)', fontWeight: 700 }}>{seg.startTime} s</span>
+          {t.segStartAt} <span style={{ color: 'var(--text)', fontWeight: 700 }}>{seg.startTime} s</span>
         </span>
         {seg.pause > 0 && (
           <span style={{
