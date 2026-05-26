@@ -44,6 +44,8 @@ const server = http.createServer(async (req, res) => {
   let body = ''
   req.on('data', chunk => body += chunk)
   req.on('end', async () => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} — body length: ${body.length}`)
+    if (body.length < 5) console.log('  ⚠ Corps vide ou trop court :', JSON.stringify(body))
     const json = data => { res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(data)) }
     const fail = err  => { res.writeHead(500, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ ok: false, error: String(err) })) }
 
