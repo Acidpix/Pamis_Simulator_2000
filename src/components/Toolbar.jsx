@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
-import { useSimStore, pushHistory, computeSegments } from '../store/simStore.js'
+import { useSimStore, pushHistory } from '../store/simStore.js'
 import { useT } from '../i18n.js'
 import { importGazeboSDF } from '../utils/importGazeboSDF.js'
+import { generateGazeboSDF } from './RightPanel.jsx'
 
 const GIT_SERVER = window.location.origin
 
@@ -41,35 +42,6 @@ function saveToFile(robots, obstacles, meta) {
   a.click()
 }
 
-// Prefer MP4/H.264 (WhatsApp-compatible) when the browser supports it,
-// fall back to WebM otherwise.
-function pickRecordingMime() {
-  const candidates = [
-    'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
-    'video/mp4;codecs=avc1.42E01E',
-    'video/mp4;codecs=avc1',
-    'video/mp4',
-    'video/webm;codecs=vp9',
-    'video/webm;codecs=vp8',
-    'video/webm',
-  ]
-  return candidates.find(t => window.MediaRecorder?.isTypeSupported(t)) || ''
-}
-
-function extForMime(mime) {
-  return mime.startsWith('video/mp4') ? 'mp4' : 'webm'
-}
-
-function lastWaypointTime(robots) {
-  let maxEnd = 0
-  for (const r of robots) {
-    if (!r.waypoints || r.waypoints.length === 0) continue
-    const segs = computeSegments(r)
-    const dur = segs.reduce((a, s) => a + s.rotDuration + s.duration + (s.arrRotDuration ?? 0) + (s.pause ?? 0) + (s.actionPause ?? 0), 0)
-    maxEnd = Math.max(maxEnd, (r.startDelay ?? 0) + dur)
-  }
-  return maxEnd
-}
 
 function loadFromFile(file, onLoad, onError) {
   const reader = new FileReader()
@@ -435,8 +407,6 @@ export default function Toolbar() {
   const loadRef   = useRef()
   const gazeboRef = useRef()
 
-  const [recording, setRecording] = useState(false)
-
   // Git state
   const [commitModal, setCommitModal] = useState(false)
   const [pickerModal, setPickerModal] = useState(false)
@@ -552,79 +522,6 @@ export default function Toolbar() {
     setStatusMsg(msg); setStatusErr(isErr)
     setTimeout(() => setStatusMsg(null), 5000)
   }
-  const recorderRef = useRef(null)
-  const chunksRef   = useRef([])
-  const unsubRef    = useRef(null)
-
-  const finalizeRecording = () => {
-    const rec = recorderRef.current
-    if (!rec) { setRecording(false); return }
-    const mime = rec.mimeType || 'video/webm'
-    const blob = new Blob(chunksRef.current, { type: mime })
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(blob)
-    a.download = `pamis_recording_${new Date().toISOString().slice(0,16).replace('T','_').replace(':','h')}.${extForMime(mime)}`
-    a.click()
-    setTimeout(() => URL.revokeObjectURL(a.href), 5000)
-    recorderRef.current = null
-    chunksRef.current = []
-    setRecording(false)
-  }
-
-  const startRecording = () => {
-    if (!window.MediaRecorder) { alert('MediaRecorder API not supported in this browser.'); return }
-    const canvas = document.querySelector('canvas')
-    if (!canvas) return
-    const mime = pickRecordingMime()
-    let stream
-    try { stream = canvas.captureStream(30) } catch { alert('Canvas capture not supported.'); return }
-    const rec = new MediaRecorder(stream, { mimeType: mime || undefined, videoBitsPerSecond: 5_000_000 })
-    chunksRef.current = []
-    rec.ondataavailable = e => { if (e.data && e.data.size) chunksRef.current.push(e.data) }
-    rec.onstop = () => {
-      if (unsubRef.current) { unsubRef.current(); unsubRef.current = null }
-      finalizeRecording()
-    }
-    recorderRef.current = rec
-
-    const store = useSimStore.getState()
-    const stopAt = lastWaypointTime(store.robots)
-    if (stopAt <= 0) {
-      alert('No waypoints to record.')
-      return
-    }
-    store.setSimPlaying(false)
-    store.setSimTime(0)
-    setRecording(true)
-    rec.start(100)
-    // Defer play one frame so the recorder is fully started.
-    requestAnimationFrame(() => {
-      useSimStore.getState().setSimPlaying(true)
-      unsubRef.current = useSimStore.subscribe((state, prev) => {
-        if (rec.state !== 'recording') return
-        if (state.simTime >= stopAt) {
-          useSimStore.getState().setSimPlaying(false)
-          useSimStore.getState().setSimTime(stopAt)
-          rec.stop()
-        } else if (prev.simPlaying && !state.simPlaying) {
-          rec.stop()
-        }
-      })
-    })
-  }
-
-  const stopRecording = () => {
-    const rec = recorderRef.current
-    if (!rec) return
-    useSimStore.getState().setSimPlaying(false)
-    if (rec.state === 'recording') rec.stop()
-  }
-
-  useEffect(() => () => {
-    if (unsubRef.current) unsubRef.current()
-    if (recorderRef.current && recorderRef.current.state === 'recording') recorderRef.current.stop()
-  }, [])
-
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light')
   }, [darkMode])
@@ -715,6 +612,12 @@ export default function Toolbar() {
         <DropdownBtn label={t.save} items={[
           { label: t.saveLocal, action: () => saveToFile(robots, obstacles, { simMaxTime, simSpeed, gridColor, gridMinorStep, gridMajorStep, viewportColor, canvasBgColor }) },
           { label: t.saveGit,   action: handleGitSave },
+          { label: t.exportGazebo, action: () => {
+            const sdf = generateGazeboSDF(robots, obstacles, simMaxTime)
+            const a = document.createElement('a')
+            a.href = URL.createObjectURL(new Blob([sdf], { type: 'application/xml' }))
+            a.download = 'pamis_world.world'; a.click()
+          }},
         ]} />
         <input type="file" accept=".json" ref={loadRef} style={{ display: 'none' }}
           onChange={e => {
@@ -722,11 +625,6 @@ export default function Toolbar() {
             loadFromFile(f, (r,o,m) => loadState(r,o,m), msg => alert(t.errorPrefix+msg))
             e.target.value = ''
           }} />
-        <DropdownBtn label={t.open} items={[
-          { label: t.openLocal, action: () => loadRef.current?.click() },
-          { label: t.openGit,   action: handleGitOpen },
-        ]} />
-
         <input type="file" accept=".world,.sdf,.xml" ref={gazeboRef} style={{ display: 'none' }}
           onChange={e => {
             const f = e.target.files[0]; if (!f) return
@@ -741,32 +639,14 @@ export default function Toolbar() {
             reader.readAsText(f)
             e.target.value = ''
           }} />
-        <TBtn onClick={() => gazeboRef.current?.click()} title={t.importGazeboTitle}>
-          {t.importGazebo}
-        </TBtn>
+        <DropdownBtn label={t.open} items={[
+          { label: t.openLocal,     action: () => loadRef.current?.click() },
+          { label: t.openGit,       action: handleGitOpen },
+          { label: t.importGazebo,  action: () => gazeboRef.current?.click() },
+        ]} />
 
         <Sep />
 
-        {/* Record */}
-        <button
-          onClick={recording ? stopRecording : startRecording}
-          title={recording ? t.recordingTitle : t.recordTitle}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 4,
-            padding: '0 12px', height: 32, borderRadius: 'var(--r)',
-            fontSize: 13, fontWeight: 600, cursor: 'pointer',
-            whiteSpace: 'nowrap', lineHeight: 1, flexShrink: 0,
-            background: recording ? '#dc2626' : 'transparent',
-            border: recording ? '1px solid #b91c1c' : '1px solid var(--border)',
-            color: recording ? '#fff' : 'var(--text2)',
-            boxShadow: recording ? '0 2px 8px rgba(220,38,38,.45)' : 'none',
-            transition: 'all .12s',
-          }}
-        >
-          {recording ? t.recording : t.record}
-        </button>
-
-        <Sep />
 
         {/* Undo / Redo */}
         <TBtn onClick={undo} title={t.undoTitle}>↩</TBtn>

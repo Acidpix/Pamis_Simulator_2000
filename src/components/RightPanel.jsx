@@ -10,7 +10,7 @@ function hexToRgb(hex) {
   return { r: ((n>>16)&255)/255, g: ((n>>8)&255)/255, b: (n&255)/255 }
 }
 
-function generateGazeboSDF(robots, obstacles, simMaxTime, step = 0.1) {
+export function generateGazeboSDF(robots, obstacles, simMaxTime, step = 0.1) {
   const actors = robots.map(robot => {
     const waypoints = []
     for (let t = 0; t <= simMaxTime + step/2; t += step) {

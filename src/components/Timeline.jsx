@@ -1,6 +1,243 @@
-import React, { useEffect, useRef, useMemo, useCallback } from 'react'
+import React, { useEffect, useRef, useMemo, useCallback, useState } from 'react'
 import { useSimStore, computeSegments, detectCollisions, detectObstacleCollisions, detectBorderCollisions } from '../store/simStore.js'
 import { useT } from '../i18n.js'
+
+// ── Helpers enregistrement ───────────────────────────────────────────────────
+function pickRecordingMime() {
+  const candidates = [
+    'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+    'video/mp4;codecs=avc1.42E01E',
+    'video/mp4;codecs=avc1',
+    'video/mp4',
+    'video/webm;codecs=vp9',
+    'video/webm;codecs=vp8',
+    'video/webm',
+  ]
+  return candidates.find(m => window.MediaRecorder?.isTypeSupported(m)) || ''
+}
+
+function extForMime(mime) {
+  return mime.startsWith('video/mp4') ? 'mp4' : 'webm'
+}
+
+function lastWaypointTime(robots) {
+  let maxEnd = 0
+  for (const r of robots) {
+    if (!r.waypoints || r.waypoints.length === 0) continue
+    const segs = computeSegments(r)
+    const dur = segs.reduce((a, s) => a + s.rotDuration + s.duration + (s.arrRotDuration ?? 0) + (s.pause ?? 0) + (s.actionPause ?? 0), 0)
+    maxEnd = Math.max(maxEnd, (r.startDelay ?? 0) + dur)
+  }
+  return maxEnd
+}
+
+const QUALITY_PRESETS = [
+  { label: '480p',  bitrate: 2_000_000 },
+  { label: '720p',  bitrate: 5_000_000 },
+  { label: '1080p', bitrate: 10_000_000 },
+]
+
+function RecordBtn({ t, robots, simMaxTime }) {
+  const [open,      setOpen]      = useState(false)
+  const [recording, setRecording] = useState(false)
+  const [quality,   setQuality]   = useState(1)        // index dans QUALITY_PRESETS
+  const [fps,       setFps]       = useState(30)
+  const [startSec,  setStartSec]  = useState(0)
+  const [endSec,    setEndSec]    = useState('')       // '' = auto
+
+  const recorderRef = useRef(null)
+  const chunksRef   = useRef([])
+  const unsubRef    = useRef(null)
+  const panelRef    = useRef(null)
+
+  const autoEnd = useMemo(() => lastWaypointTime(robots), [robots])
+  const effectiveEnd = endSec !== '' ? Number(endSec) : autoEnd
+
+  // Ferme le panneau si clic extérieur
+  useEffect(() => {
+    if (!open) return
+    const close = e => { if (panelRef.current && !panelRef.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [open])
+
+  // Nettoyage au démontage
+  useEffect(() => () => {
+    if (unsubRef.current) unsubRef.current()
+    if (recorderRef.current?.state === 'recording') recorderRef.current.stop()
+  }, [])
+
+  const finalizeRecording = () => {
+    const rec = recorderRef.current
+    if (!rec) { setRecording(false); return }
+    const mime = rec.mimeType || 'video/webm'
+    const blob = new Blob(chunksRef.current, { type: mime })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = `pamis_${new Date().toISOString().slice(0,16).replace('T','_').replace(':','h')}.${extForMime(mime)}`
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000)
+    recorderRef.current = null
+    chunksRef.current = []
+    setRecording(false)
+  }
+
+  const startRecording = () => {
+    if (!window.MediaRecorder) { alert('MediaRecorder API non supportée.'); return }
+    if (autoEnd <= 0) { alert(t.recNoWaypoints); return }
+    const canvas = document.querySelector('canvas')
+    if (!canvas) return
+    const mime = pickRecordingMime()
+    let stream
+    try { stream = canvas.captureStream(fps) } catch { alert('Canvas capture non supporté.'); return }
+    const rec = new MediaRecorder(stream, {
+      mimeType: mime || undefined,
+      videoBitsPerSecond: QUALITY_PRESETS[quality].bitrate,
+    })
+    chunksRef.current = []
+    rec.ondataavailable = e => { if (e.data?.size) chunksRef.current.push(e.data) }
+    rec.onstop = () => {
+      if (unsubRef.current) { unsubRef.current(); unsubRef.current = null }
+      finalizeRecording()
+    }
+    recorderRef.current = rec
+    const stopAt = effectiveEnd > 0 ? effectiveEnd : autoEnd
+    const store = useSimStore.getState()
+    store.setSimPlaying(false)
+    store.setSimTime(Number(startSec) || 0)
+    setOpen(false)
+    setRecording(true)
+    rec.start(100)
+    requestAnimationFrame(() => {
+      useSimStore.getState().setSimPlaying(true)
+      unsubRef.current = useSimStore.subscribe((state, prev) => {
+        if (rec.state !== 'recording') return
+        if (state.simTime >= stopAt) {
+          useSimStore.getState().setSimPlaying(false)
+          useSimStore.getState().setSimTime(stopAt)
+          rec.stop()
+        } else if (prev.simPlaying && !state.simPlaying) {
+          rec.stop()
+        }
+      })
+    })
+  }
+
+  const stopRecording = () => {
+    useSimStore.getState().setSimPlaying(false)
+    if (recorderRef.current?.state === 'recording') recorderRef.current.stop()
+  }
+
+  const inputStyle = {
+    padding: '4px 8px', borderRadius: 'var(--r)',
+    border: '1px solid var(--border)', background: 'var(--surface2)',
+    color: 'var(--text)', fontSize: 12, width: '100%', boxSizing: 'border-box',
+  }
+  const labelStyle = { fontSize: 11, fontWeight: 700, color: 'var(--text3)', marginBottom: 3, display: 'block' }
+
+  return (
+    <div ref={panelRef} style={{ position: 'relative', flexShrink: 0 }}>
+      {/* Panneau de réglages */}
+      {open && !recording && (
+        <div style={{
+          position: 'absolute', bottom: 'calc(100% + 10px)', right: 0,
+          background: 'var(--surface)', border: '2px solid #dc2626',
+          borderRadius: 10, boxShadow: '0 -8px 32px rgba(220,38,38,.15)',
+          padding: '16px', width: 230, zIndex: 1000,
+        }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: '#dc2626', marginBottom: 12 }}>
+            ⏺ {t.recSettings}
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {/* Qualité */}
+            <div>
+              <label style={labelStyle}>{t.recQuality}</label>
+              <select value={quality} onChange={e => setQuality(Number(e.target.value))} style={inputStyle}>
+                {QUALITY_PRESETS.map((p, i) => (
+                  <option key={p.label} value={i}>{p.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* FPS */}
+            <div>
+              <label style={labelStyle}>{t.recFramerate}</label>
+              <select value={fps} onChange={e => setFps(Number(e.target.value))} style={inputStyle}>
+                {[24, 30, 60].map(f => <option key={f} value={f}>{f} fps</option>)}
+              </select>
+            </div>
+
+            {/* Timing */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <div>
+                <label style={labelStyle}>{t.recStartTime}</label>
+                <input
+                  type="number" min={0} max={simMaxTime} step={0.5}
+                  value={startSec}
+                  onChange={e => setStartSec(e.target.value)}
+                  style={inputStyle}
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>{t.recEndTime}</label>
+                <input
+                  type="number" min={0} max={simMaxTime} step={0.5}
+                  value={endSec}
+                  placeholder={`${autoEnd.toFixed(1)}`}
+                  onChange={e => setEndSec(e.target.value)}
+                  style={inputStyle}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+            <button
+              onClick={() => setOpen(false)}
+              style={{
+                flex: 1, padding: '7px 0', borderRadius: 'var(--r)',
+                border: '1px solid var(--border)', background: 'transparent',
+                color: 'var(--text2)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+              }}
+            >{t.recCancel}</button>
+            <button
+              onClick={startRecording}
+              style={{
+                flex: 1, padding: '7px 0', borderRadius: 'var(--r)',
+                border: '1px solid #dc2626', background: '#dc2626',
+                color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+              }}
+            >{t.recRecord}</button>
+          </div>
+        </div>
+      )}
+
+      {/* Bouton principal */}
+      <button
+        onClick={() => recording ? stopRecording() : setOpen(o => !o)}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: 7,
+          padding: '0 14px', height: 36, borderRadius: 'var(--r)',
+          fontSize: 12, fontWeight: 700, cursor: 'pointer',
+          whiteSpace: 'nowrap', lineHeight: 1, flexShrink: 0,
+          background: recording ? '#dc2626' : 'transparent',
+          border: recording ? '2px solid #b91c1c' : '2px solid #dc2626',
+          color: recording ? '#fff' : '#dc2626',
+          boxShadow: recording ? '0 0 14px rgba(220,38,38,.5)' : '0 0 0 rgba(220,38,38,0)',
+          transition: 'all .15s',
+        }}
+      >
+        <span style={{
+          width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+          background: recording ? '#fff' : '#dc2626',
+          boxShadow: recording ? '0 0 6px #fff' : 'none',
+        }} />
+        {recording ? t.recStop : t.recTitle}
+      </button>
+    </div>
+  )
+}
 
 const TRACK_H = 20
 const LABEL_W = 80
@@ -254,7 +491,7 @@ export default function Timeline() {
           </div>
         </div>
 
-        {/* ── Droite : vitesse + durée ── */}
+        {/* ── Droite : vitesse + durée + record ── */}
         <div style={{ position: 'absolute', right: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
           {/* Slider si pas de pistes */}
           {!hasRobots && (
@@ -293,6 +530,10 @@ export default function Timeline() {
             />
             <span style={{ fontSize: 11, color: 'var(--text3)' }}>s</span>
           </div>
+
+          {/* Séparateur + bouton Enregistrement */}
+          <div style={{ width: 1, height: 24, background: 'var(--border)', flexShrink: 0 }} />
+          <RecordBtn t={t} robots={robots} simMaxTime={simMaxTime} />
         </div>
       </div>
     </div>

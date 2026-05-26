@@ -82,14 +82,29 @@ Permet de planifier, visualiser et exporter les trajectoires de plusieurs robots
 ## Installation (production)
 
 ```bash
-bash install.sh
+sudo bash install.sh
 ```
 
 Le script :
 1. Clone le dépôt depuis `https://github.com/Acidpix/Pamis_Simulator_2000.git`
 2. Installe Node.js 20 LTS si absent
 3. Build (`npm run build`)
-4. Crée et active un service **systemd** `pamis-simulator-2000` (port 3000)
+4. Crée et active deux services **systemd** :
+   - `pamis-simulator-2000` — serveur statique (`serve`) sur le port **3000**
+   - `pamis-git-server` — serveur git sur le port **3001**
+
+```bash
+# Vérifier les services
+systemctl status pamis-simulator-2000
+systemctl status pamis-git-server
+
+# Logs en direct
+journalctl -u pamis-simulator-2000 -f
+journalctl -u pamis-git-server -f
+```
+
+> **Proxy inverse recommandé** : exposer les deux ports sous le même domaine via nginx / NPM.  
+> Configurer un `location /git/` qui proxie vers `http://<machine>:3001` pour éviter les problèmes de mixed-content HTTPS.
 
 ---
 
@@ -97,33 +112,32 @@ Le script :
 
 ```bash
 npm install
-npm run dev
+npm run dev          # Vite dev server (port 5173)
+node git-server.js   # Dans un second terminal
 ```
 
-### Intégration Git — serveur local
+### Intégration Git — comment ça fonctionne
 
-La fonctionnalité Git nécessite un serveur Node.js local qui exécute les commandes `git` côté machine (le navigateur ne peut pas appeler git directement).
+Le navigateur ne peut pas exécuter `git` directement. `git-server.js` est un serveur Node.js léger (aucune dépendance externe) qui reçoit les requêtes de l'app et exécute les commandes git.
 
-```bash
-# Dans un second terminal (en parallèle du dev server)
-node git-server.js
-```
+Pour chaque opération (commit, pull, liste), le serveur :
+1. Clone le dépôt distant dans un **dossier temporaire isolé** (`/tmp/pamis-XXXXXX/`)
+2. Effectue l'opération (écriture du fichier → `git add` → `git commit` → `git push`)
+3. Supprime le dossier temporaire
 
-Le serveur écoute sur **http://localhost:3001**.  
-Il n'a aucune dépendance externe — uniquement les modules Node.js natifs (`http`, `fs`, `child_process`).
+Cette approche garantit l'isolation totale entre utilisateurs et ne touche jamais au dossier de l'application.
 
 **Configuration** (onglet ⚙️ Réglages dans l'app) :
+
 | Champ | Exemple |
 |---|---|
 | URL du dépôt | `https://github.com/user/repo.git` |
 | Nom du fichier | `pamis_config.json` |
 | Branche | `main` |
-| Token (GitHub) | `ghp_xxxxxxxxxxxx` |
-| Token (GitLab) | `glpat-xxxxxxxxxxxx` |
+| Token GitHub | `ghp_xxxxxxxxxxxx` |
+| Token GitLab | `glpat-xxxxxxxxxxxx` |
 
-> Les identifiants sont stockés dans le `localStorage` du navigateur (non transmis hors de votre machine).
-
-**En production** : si tu utilises `serve` + `git-server.js` simultanément, tu peux créer deux services systemd (un pour `serve`, un pour `node git-server.js`). Voir le script `install.sh`.
+> Les identifiants sont stockés dans le `localStorage` du navigateur et ne transitent que vers votre propre `git-server.js`.
 
 ---
 
