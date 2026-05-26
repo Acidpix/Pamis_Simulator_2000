@@ -5,5 +5,16 @@ export default defineConfig({
   plugins: [react()],
   assetsInclude: ['**/*.stl', '**/*.svg'],
   server: { port: 5173 },
-  preview: { allowedHosts: ['sim.acidpix.fr'] }
+  preview: { allowedHosts: ['sim.acidpix.fr'] },
+  build: {
+    chunkSizeWarningLimit: 2000,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'three': ['three'],
+          'react-three': ['@react-three/fiber', '@react-three/drei'],
+        },
+      },
+    },
+  },
 })

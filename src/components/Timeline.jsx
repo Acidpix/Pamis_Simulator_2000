@@ -435,7 +435,7 @@ export default function Timeline() {
         minHeight: 60,
       }}>
 
-        {/* ── Gauche : boutons transport ── */}
+        {/* ── Gauche : boutons transport + enregistrement ── */}
         <div style={{ position: 'absolute', left: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
           <button
             onClick={() => { setSimPlaying(false); setSimTime(0) }}
@@ -459,6 +459,9 @@ export default function Timeline() {
               boxShadow: simPlaying ? '0 2px 10px var(--accent-mid)' : '0 2px 10px var(--green-dim)',
             }}
           >{simPlaying ? <PauseIcon /> : <PlayIcon />}</button>
+
+          <div style={{ width: 1, height: 24, background: 'var(--border)', flexShrink: 0 }} />
+          <RecordBtn t={t} robots={robots} simMaxTime={simMaxTime} />
         </div>
 
         {/* ── Centre : temps écoulé / restant ── */}
@@ -531,9 +534,6 @@ export default function Timeline() {
             <span style={{ fontSize: 11, color: 'var(--text3)' }}>s</span>
           </div>
 
-          {/* Séparateur + bouton Enregistrement */}
-          <div style={{ width: 1, height: 24, background: 'var(--border)', flexShrink: 0 }} />
-          <RecordBtn t={t} robots={robots} simMaxTime={simMaxTime} />
         </div>
       </div>
     </div>
