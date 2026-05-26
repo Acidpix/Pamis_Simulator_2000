@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState, useMemo, useCallback, Suspense, memo } from 'react'
 import { useT } from '../i18n.js'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { OrthographicCamera, PerspectiveCamera, OrbitControls, Line, Html, useTexture } from '@react-three/drei'
+import { OrthographicCamera, PerspectiveCamera, OrbitControls, Line, Html, Text, useTexture } from '@react-three/drei'
 import * as THREE from 'three'
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
 import { useSimStore, getRobotPose, stlCache, pushHistory } from '../store/simStore.js'
@@ -13,6 +13,121 @@ function BgColorSetter({ color }) {
 }
 
 const DEG = Math.PI / 180
+
+// In-canvas labels rendered via a 2D canvas texture so they (a) get recorded
+// by canvas.captureStream, and (b) display color-emoji glyphs via the system
+// emoji font (Apple/Segoe/Noto). troika-three-text doesn't render color emoji.
+const EMOJI_FONT_STACK = '-apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif'
+const chipTextureCache = new Map()
+const emojiTextureCache = new Map()
+
+function drawRoundedRect(ctx, x, y, w, h, r) {
+  const rr = Math.min(r, w/2, h/2)
+  ctx.beginPath()
+  ctx.moveTo(x+rr, y)
+  ctx.lineTo(x+w-rr, y)
+  ctx.quadraticCurveTo(x+w, y, x+w, y+rr)
+  ctx.lineTo(x+w, y+h-rr)
+  ctx.quadraticCurveTo(x+w, y+h, x+w-rr, y+h)
+  ctx.lineTo(x+rr, y+h)
+  ctx.quadraticCurveTo(x, y+h, x, y+h-rr)
+  ctx.lineTo(x, y+rr)
+  ctx.quadraticCurveTo(x, y, x+rr, y)
+  ctx.closePath()
+}
+
+function makeChipTexture({ text, bg, color, fontPx, bold }) {
+  const key = `${text}|${bg}|${color}|${fontPx}|${bold?1:0}`
+  let entry = chipTextureCache.get(key)
+  if (entry) return entry
+  const dpr = Math.min(2, window.devicePixelRatio || 1)
+  const measure = document.createElement('canvas').getContext('2d')
+  const font = `${bold?'bold ':''}${fontPx}px ${EMOJI_FONT_STACK}`
+  measure.font = font
+  const padX = fontPx * 0.55, padY = fontPx * 0.32
+  const textW = measure.measureText(text).width
+  const w = Math.ceil(textW + padX * 2)
+  const h = Math.ceil(fontPx * 1.25 + padY * 2)
+  const canvas = document.createElement('canvas')
+  canvas.width = w * dpr
+  canvas.height = h * dpr
+  const ctx = canvas.getContext('2d')
+  ctx.scale(dpr, dpr)
+  ctx.font = font
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillStyle = bg
+  drawRoundedRect(ctx, 0, 0, w, h, Math.min(h * 0.35, 8))
+  ctx.fill()
+  ctx.fillStyle = color
+  ctx.fillText(text, w/2, h/2)
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.minFilter = THREE.LinearFilter
+  texture.magFilter = THREE.LinearFilter
+  texture.anisotropy = 4
+  texture.needsUpdate = true
+  entry = { texture, w, h }
+  chipTextureCache.set(key, entry)
+  return entry
+}
+
+function makeEmojiTexture(emoji, fontPx = 96) {
+  const key = `${emoji}|${fontPx}`
+  let entry = emojiTextureCache.get(key)
+  if (entry) return entry
+  const dpr = Math.min(2, window.devicePixelRatio || 1)
+  const size = Math.ceil(fontPx * 1.2)
+  const canvas = document.createElement('canvas')
+  canvas.width = canvas.height = size * dpr
+  const ctx = canvas.getContext('2d')
+  ctx.scale(dpr, dpr)
+  ctx.font = `${fontPx}px ${EMOJI_FONT_STACK}`
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText(emoji, size/2, size/2)
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.minFilter = THREE.LinearFilter
+  texture.magFilter = THREE.LinearFilter
+  texture.anisotropy = 4
+  texture.needsUpdate = true
+  entry = { texture, size }
+  emojiTextureCache.set(key, entry)
+  return entry
+}
+
+function Chip({ position, text, bg, fontSize = 0.04, color = '#fff', bold = true }) {
+  const fontPx = 36
+  const { texture, w, h } = useMemo(
+    () => makeChipTexture({ text: String(text), bg, color, fontPx, bold }),
+    [text, bg, color, bold]
+  )
+  const targetH = fontSize * 1.9
+  const scale = targetH / h
+  const worldW = w * scale
+  return (
+    <mesh position={position}>
+      <planeGeometry args={[worldW, targetH]} />
+      <meshBasicMaterial map={texture} transparent depthWrite={false} />
+    </mesh>
+  )
+}
+
+function ActionLabel({ position }) {
+  const ref = useRef()
+  const startRef = useRef(null)
+  const { texture } = useMemo(() => makeEmojiTexture('💪', 96), [])
+  useFrame(({ clock }) => {
+    if (startRef.current === null) startRef.current = clock.elapsedTime
+    const t = clock.elapsedTime - startRef.current
+    if (ref.current) ref.current.visible = (Math.floor(t * 2) % 2) === 0
+  })
+  return (
+    <mesh ref={ref} position={position}>
+      <planeGeometry args={[0.18, 0.18]} />
+      <meshBasicMaterial map={texture} transparent depthWrite={false} />
+    </mesh>
+  )
+}
 
 function BgTexture({ url, w, h }) {
   const texture = useTexture(url)
@@ -70,9 +185,17 @@ function Table({ w, h, bgImage, showGrid, gridColor, gridMinorStep, gridMajorSte
         color={gridColor} lineWidth={3} />
 
       {markers.map((m,i) => (
-        <Html key={i} position={m.type==='x'?[m.v-w/2,-h/2-0.10,0.01]:[-w/2-0.10,m.v-h/2,0.01]} center>
-          <span style={{ fontSize:9, color:gridColor, opacity:.8, fontWeight:500, userSelect:'none', whiteSpace:'nowrap' }}>{m.label}</span>
-        </Html>
+        <Text
+          key={i}
+          position={m.type==='x'?[m.v-w/2,-h/2-0.10,0.01]:[-w/2-0.10,m.v-h/2,0.01]}
+          fontSize={0.035}
+          color={gridColor}
+          fillOpacity={0.8}
+          anchorX="center"
+          anchorY="middle"
+        >
+          {m.label}
+        </Text>
       ))}
 
       {/* Bordures : 15mm d'épaisseur, 70mm de haut */}
@@ -157,18 +280,20 @@ function TrajectoryLine({ robot, selected, simTime, onWaypointClick, onWaypointD
             <meshBasicMaterial color={robot.color} transparent opacity={.9} />
           </mesh>
           {(wp.pause??0)>0 && (
-            <Html position={[wp.x-1.5,wp.y-1.0+0.09,0.031]} center>
-              <div style={{ fontSize:10, background:'#f08c00', color:'#fff', padding:'1px 5px', borderRadius:3, whiteSpace:'nowrap' }}>
-                ⏱ {wp.pause}s
-              </div>
-            </Html>
+            <Chip
+              position={[wp.x-1.5, wp.y-1.0+0.09, 0.031]}
+              text={`⏱ ${wp.pause}s`}
+              bg="#f08c00"
+              fontSize={0.035}
+            />
           )}
           {(wp.actionPause??0)>0 && (
-            <Html position={[wp.x-1.5,wp.y-1.0-0.09,0.031]} center>
-              <div style={{ fontSize:10, background:'#7048e8', color:'#fff', padding:'1px 5px', borderRadius:3, whiteSpace:'nowrap' }}>
-                💪 {wp.actionPause}s
-              </div>
-            </Html>
+            <Chip
+              position={[wp.x-1.5, wp.y-1.0-0.09, 0.031]}
+              text={`💪 ${wp.actionPause}s`}
+              bg="#7048e8"
+              fontSize={0.035}
+            />
           )}
         </group>
       ))}
@@ -183,12 +308,6 @@ function TrajectoryLine({ robot, selected, simTime, onWaypointClick, onWaypointD
       })}
     </group>
   )
-}
-
-function BlinkingEmoji() {
-  const [vis, setVis] = useState(true)
-  useEffect(() => { const id = setInterval(() => setVis(v => !v), 500); return () => clearInterval(id) }, [])
-  return <div style={{ fontSize: 28, userSelect: 'none', lineHeight: 1 }}>{vis ? '💪' : ''}</div>
 }
 
 // ── Robot ──
@@ -237,16 +356,13 @@ function RobotMesh({ robot, selected, simTime, onPointerDown, is3d }) {
         <meshBasicMaterial color="#ffffff" />
       </mesh>
 
-      <Html position={[0,robot.height/2+.09,is3d?robotH/2:0]} center>
-        <div style={{ fontSize:12, fontWeight:700, color:'#fff', background:robot.color, padding:'2px 7px', borderRadius:5, userSelect:'none', whiteSpace:'nowrap', boxShadow:'0 2px 6px rgba(0,0,0,.35)' }}>
-          {robot.name}
-        </div>
-      </Html>
-      {pose.inAction && (
-        <Html position={[0,0,is3d?robotH:0.12]} center>
-          <BlinkingEmoji />
-        </Html>
-      )}
+      <Chip
+        position={[0, robot.height/2 + 0.09, is3d ? robotH/2 : 0.005]}
+        text={robot.name}
+        bg={robot.color}
+        fontSize={0.05}
+      />
+      {pose.inAction && <ActionLabel position={[0, 0, is3d ? robotH : 0.12]} />}
     </group>
   )
 }
@@ -284,11 +400,12 @@ function ObstacleMesh({ obs, selected, onPointerDown, is3d }) {
         </lineSegments>
       )}
 
-      <Html position={[0,(obs.height||obs.radius||.1)/2+.08,is3d?h/2:0]} center>
-        <div style={{ fontSize:11, fontWeight:600, color:'#fff', background:obs.color, padding:'1px 6px', borderRadius:4, userSelect:'none', whiteSpace:'nowrap', boxShadow:'0 1px 4px rgba(0,0,0,.3)' }}>
-          {obs.name}
-        </div>
-      </Html>
+      <Chip
+        position={[0, (obs.height||obs.radius||0.1)/2 + 0.08, is3d ? h/2 : 0.005]}
+        text={obs.name}
+        bg={obs.color}
+        fontSize={0.04}
+      />
     </group>
   )
 }
