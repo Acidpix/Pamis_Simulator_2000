@@ -296,7 +296,7 @@ function RobotTrajectory({ robot, defaultOpen, onPauseChange, onActionPauseChang
                     {(onPauseChange || onActionPauseChange || onHeadingChange) && (
                       <div style={{
                         padding: '8px 12px',
-                        background: 'var(--surface2)',
+                        background: 'var(--surface3)',
                         border: `2px solid var(--border)`,
                         borderTop: 'none',
                         borderLeft: `4px solid ${accent}`,
@@ -305,19 +305,19 @@ function RobotTrajectory({ robot, defaultOpen, onPauseChange, onActionPauseChang
                       }}>
                         {onPauseChange && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ fontSize: 11, color: 'var(--text)', flex: 1, fontWeight: 700 }}>⏸ {t.pauseOnArrival}</span>
+                            <span style={{ fontSize: 11, color: 'var(--text)', flex: 1, fontWeight: 700 }}>{t.pauseOnArrival}</span>
                             <PauseInput value={robot.waypoints[i]?.pause ?? 0} onChange={v => onPauseChange(i, v)} />
                           </div>
                         )}
                         {onActionPauseChange && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ fontSize: 11, color: '#9b72f5', flex: 1, fontWeight: 700 }}>💪 Action</span>
+                            <span style={{ fontSize: 11, color: '#9b72f5', flex: 1, fontWeight: 700 }}>Action</span>
                             <PauseInput value={robot.waypoints[i]?.actionPause ?? 0} onChange={v => onActionPauseChange(i, v)} />
                           </div>
                         )}
                         {onHeadingChange && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ fontSize: 11, color: 'var(--text)', flex: 1, fontWeight: 700 }}>🧭 {t.arrivalHeading}</span>
+                            <span style={{ fontSize: 11, color: 'var(--text)', flex: 1, fontWeight: 700 }}>{t.arrivalHeading}</span>
                             <HeadingInput value={robot.waypoints[i]?.heading ?? null} onChange={v => onHeadingChange(i, v)} />
                           </div>
                         )}
