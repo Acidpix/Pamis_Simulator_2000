@@ -84,6 +84,7 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(404); res.end()
       }
     } catch (err) {
+      console.error('  ✗ Erreur :', String(err))
       fail(err)
     }
   })
