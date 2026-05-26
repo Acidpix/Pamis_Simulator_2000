@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 
 export const stlCache = new Map()
+export const obsStlCache = new Map()
 export const AUTOSAVE_KEY = 'pamis_autosave'
 export const GIT_CONFIG_KEY = 'pamis_git_config'
 
@@ -45,6 +46,7 @@ function makeRobot(ov = {}) {
     shapeType: 'rect',
     collisionShape: 'circle',
     width: 0.200, height: 0.200, radius: 0.140,
+    collisionW: 0.200, collisionH: 0.200,
     opacity: 1.0,
     hasStl: false,
     stlRotX: -90, stlRotY: 0, stlRotZ: 0,
@@ -59,10 +61,13 @@ function makeObs(ov = {}) {
     name: `Obstacle ${oCount}`,
     color: '#64748b',
     x: 1.5, y: 1.0,
+    heading: 0,
     width: 0.200, height: 0.200, radius: 0.140,
     shape: 'rect',
     collisionShape: 'rect',
     opacity: 1.0,
+    hasStl: false,
+    stlRotX: -90, stlRotY: 0, stlRotZ: 0,
     ...ov,
   }
 }
@@ -285,8 +290,8 @@ export function detectCollisions(robots, maxTime, step=0.05) {
       const a=robots[i], b=robots[j]; let col=false
       for (let t=0; t<=maxTime; t+=step) {
         const pa=getRobotPose(a,t), pb=getRobotPose(b,t)
-        const hit = shapesCollide(pa.x,pa.y,a.radius,a.width,a.height,a.collisionShape??'circle',
-                                   pb.x,pb.y,b.radius,b.width,b.height,b.collisionShape??'circle')
+        const hit = shapesCollide(pa.x,pa.y,a.radius,a.collisionShape==='rect'?(a.collisionW??a.width):a.width,a.collisionShape==='rect'?(a.collisionH??a.height):a.height,a.collisionShape??'circle',
+                                   pb.x,pb.y,b.radius,b.collisionShape==='rect'?(b.collisionW??b.width):b.width,b.collisionShape==='rect'?(b.collisionH??b.height):b.height,b.collisionShape??'circle')
         if (hit && !col) { events.push({aId:a.id,bId:b.id,t:Math.round(t*100)/100,x:(pa.x+pb.x)/2,y:(pa.y+pb.y)/2}); col=true }
         if (!hit) col=false
       }
@@ -301,7 +306,9 @@ export function detectObstacleCollisions(robots, obstacles, maxTime, step=0.05) 
       let col=false
       for (let t=0; t<=maxTime; t+=step) {
         const p=getRobotPose(robot,t)
-        const hit = shapesCollide(p.x,p.y,robot.radius,robot.width,robot.height,robot.collisionShape??'circle',
+        const rw = robot.collisionShape==='rect'?(robot.collisionW??robot.width):robot.width
+        const rh = robot.collisionShape==='rect'?(robot.collisionH??robot.height):robot.height
+        const hit = shapesCollide(p.x,p.y,robot.radius,rw,rh,robot.collisionShape??'circle',
                                    obs.x,obs.y,obs.radius,obs.width,obs.height,obs.collisionShape??'rect')
         if (hit && !col) { events.push({robotId:robot.id,obsId:obs.id,t:Math.round(t*100)/100,x:(p.x+obs.x)/2,y:(p.y+obs.y)/2}); col=true }
         if (!hit) col=false
@@ -317,8 +324,8 @@ export function detectBorderCollisions(robots, tableW, tableH, maxTime, step=0.0
     for (let t=0; t<=maxTime; t+=step) {
       const p=getRobotPose(robot,t)
       const isRect = (robot.collisionShape??'circle')==='rect'
-      const hw = isRect ? robot.width/2  : robot.radius
-      const hh = isRect ? robot.height/2 : robot.radius
+      const hw = isRect ? (robot.collisionW??robot.width)/2  : robot.radius
+      const hh = isRect ? (robot.collisionH??robot.height)/2 : robot.radius
       const hit = p.x-hw<0 || p.x+hw>tableW || p.y-hh<0 || p.y+hh>tableH
       if (hit && !col) {
         const cx = Math.max(hw, Math.min(tableW-hw, p.x))
@@ -358,6 +365,7 @@ export const useSimStore = create(immer((set, get) => ({
   selectObstacle: (id) => set(s => { s.selectedObsId=id }),
   updateObstacle: (id, patch) => set(s => { const o=s.obstacles.find(o=>o.id===id); if(o) Object.assign(o,patch) }),
   setObstaclePosition: (id, x, y) => set(s => { const o=s.obstacles.find(o=>o.id===id); if(o){o.x=x;o.y=y} }),
+  setObsStlData: (id, buf) => { obsStlCache.set(id, buf); set(s => { const o=s.obstacles.find(o=>o.id===id); if(o) o.hasStl=true }) },
 
   mode: 'draw', setMode: m => set(s => { s.mode=m }),
 

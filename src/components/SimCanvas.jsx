@@ -4,7 +4,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { OrthographicCamera, PerspectiveCamera, OrbitControls, Line, Html, Text, useTexture, Billboard } from '@react-three/drei'
 import * as THREE from 'three'
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
-import { useSimStore, getRobotPose, stlCache, pushHistory } from '../store/simStore.js'
+import { useSimStore, getRobotPose, stlCache, obsStlCache, pushHistory } from '../store/simStore.js'
 
 function BgColorSetter({ color }) {
   const { gl } = useThree()
@@ -244,6 +244,23 @@ function useStlGeo(robotId, hasStl, width) {
   }, [robotId, hasStl, width])
 }
 
+function useObsStlGeo(obsId, hasStl, width) {
+  return useMemo(() => {
+    if (!hasStl) return null
+    const buf = obsStlCache.get(obsId)
+    if (!buf) return null
+    try {
+      const geo = new STLLoader().parse(buf)
+      geo.computeBoundingBox()
+      const sz = new THREE.Vector3(); geo.boundingBox.getSize(sz)
+      const maxDim = Math.max(sz.x,sz.y,sz.z)
+      if (maxDim>0) { const s=width/maxDim; geo.scale(s,s,s) }
+      geo.center()
+      return geo
+    } catch { return null }
+  }, [obsId, hasStl, width])
+}
+
 // ── Trajectoire ──
 function TrajectoryLine({ robot, selected, simTime, onWaypointClick, onWaypointDown, onSegmentClick }) {
   const pts = useMemo(() => {
@@ -271,32 +288,42 @@ function TrajectoryLine({ robot, selected, simTime, onWaypointClick, onWaypointD
           </mesh>
         )
       })}
-      {robot.waypoints.map((wp,i) => (
-        <group key={i}>
-          <mesh position={[wp.x-1.5,wp.y-1.0,0.030]}
-            onClick={e=>{e.stopPropagation();onWaypointClick?.(i)}}
-            onPointerDown={e=>{e.stopPropagation();onWaypointDown?.(i)}}>
-            <circleGeometry args={[0.055,16]} />
-            <meshBasicMaterial color={robot.color} transparent opacity={.9} />
-          </mesh>
-          {(wp.pause??0)>0 && (
+      {robot.waypoints.map((wp,i) => {
+        const hasPause = (wp.pause??0)>0
+        const hasAction = (wp.actionPause??0)>0
+        return (
+          <group key={i}>
+            <mesh position={[wp.x-1.5,wp.y-1.0,0.030]}
+              onClick={e=>{e.stopPropagation();onWaypointClick?.(i)}}
+              onPointerDown={e=>{e.stopPropagation();onWaypointDown?.(i)}}>
+              <circleGeometry args={[0.055,16]} />
+              <meshBasicMaterial color={robot.color} transparent opacity={.9} />
+            </mesh>
             <Chip
-              position={[wp.x-1.5, wp.y-1.0+0.09, 0.031]}
-              text={`⏱ ${wp.pause}s`}
-              bg="#f08c00"
-              fontSize={0.035}
+              position={[wp.x-1.5, wp.y-1.0+0.075, 0.031]}
+              text={`${i+1}`}
+              bg={robot.color}
+              fontSize={0.032}
             />
-          )}
-          {(wp.actionPause??0)>0 && (
-            <Chip
-              position={[wp.x-1.5, wp.y-1.0-0.09, 0.031]}
-              text={`💪 ${wp.actionPause}s`}
-              bg="#7048e8"
-              fontSize={0.035}
-            />
-          )}
-        </group>
-      ))}
+            {hasPause && (
+              <Chip
+                position={[wp.x-1.5, wp.y-1.0-(hasAction?0.115:0.09), 0.031]}
+                text={`⏱ ${wp.pause}s`}
+                bg="#f08c00"
+                fontSize={0.035}
+              />
+            )}
+            {hasAction && (
+              <Chip
+                position={[wp.x-1.5, wp.y-1.0-(hasPause?0.165:0.09), 0.031]}
+                text={`💪 ${wp.actionPause}s`}
+                bg="#7048e8"
+                fontSize={0.035}
+              />
+            )}
+          </group>
+        )
+      })}
       {pts.slice(0,-1).map((p,i) => {
         const np=pts[i+1], mid=new THREE.Vector3().lerpVectors(p,np,0.55)
         return (
@@ -345,7 +372,7 @@ function RobotMesh({ robot, selected, simTime, onPointerDown, is3d }) {
       )}
       {selected && collShape==='rect' && (
         <lineSegments position={[0,0,is3d?-robotH/2+.001:.013]}>
-          <edgesGeometry args={[new THREE.BoxGeometry(robot.width,robot.height,0.001)]} />
+          <edgesGeometry args={[new THREE.BoxGeometry(robot.collisionW??robot.width, robot.collisionH??robot.height, 0.001)]} />
           <lineBasicMaterial color="#ffffff" transparent opacity={.7} />
         </lineSegments>
       )}
@@ -374,10 +401,18 @@ function ObstacleMesh({ obs, selected, onPointerDown, is3d }) {
   const h = is3d ? Math.max(obs.width,obs.height)*0.5 : 0.05
   const opacity = obs.opacity ?? 1
   const collShape = obs.collisionShape ?? 'rect'
+  const stlGeo = useObsStlGeo(obs.id, obs.hasStl, Math.max(obs.width, obs.height))
 
   return (
-    <group position={[obs.x-1.5,obs.y-1.0,is3d?h/2:0]} onPointerDown={onPointerDown}>
-      {obs.shape==='circle' ? (
+    <group position={[obs.x-1.5,obs.y-1.0,is3d?h/2:0]}
+      rotation={[0,0,(obs.heading??0)*DEG]}
+      onPointerDown={onPointerDown}>
+      {stlGeo ? (
+        <mesh geometry={stlGeo} castShadow
+          rotation={[(obs.stlRotX??-90)*DEG,(obs.stlRotY??0)*DEG,(obs.stlRotZ??0)*DEG]}>
+          <meshStandardMaterial color={obs.color} transparent opacity={opacity*.9} roughness={.6} />
+        </mesh>
+      ) : obs.shape==='circle' ? (
         <mesh castShadow>
           <cylinderGeometry args={[obs.radius,obs.radius,h,32]} rotation={[Math.PI/2,0,0]} />
           <meshStandardMaterial color={obs.color} transparent opacity={opacity*.9} roughness={.6} />
@@ -685,10 +720,36 @@ function ShortcutsOverlay() {
   )
 }
 
+const MODE_COLORS = { draw: '#6366f1', move: '#2f9e44' }
+
+function ModeIndicator({ mode }) {
+  const t = useT()
+  const color = MODE_COLORS[mode] || '#6366f1'
+  const label = mode === 'draw' ? `✏ ${t.draw}` : `✋ ${t.move}`
+  return (
+    <div style={{
+      position: 'absolute', top: 12, right: 12, zIndex: 10,
+      padding: '5px 12px', borderRadius: 20,
+      background: `${color}22`,
+      border: `1.5px solid ${color}88`,
+      color, fontSize: 12, fontWeight: 800,
+      letterSpacing: '.03em',
+      pointerEvents: 'none',
+      backdropFilter: 'blur(6px)',
+      boxShadow: `0 2px 10px ${color}33`,
+    }}>{label}</div>
+  )
+}
+
 export default function SimCanvas({ onTableClick }) {
   const s = useSimStore()
+  const borderColor = MODE_COLORS[s.mode] || '#6366f1'
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+    <div style={{
+      position: 'relative', width: '100%', height: '100%',
+      boxShadow: `inset 0 0 0 3px ${borderColor}66`,
+      transition: 'box-shadow .25s',
+    }}>
       <Canvas shadows style={{ width:'100%', height:'100%' }} gl={{ antialias:true }}
         onCreated={({ gl }) => gl.setClearColor(new THREE.Color(s.canvasBgColor || '#dde3ec'))}>
         <Scene
@@ -709,6 +770,7 @@ export default function SimCanvas({ onTableClick }) {
           onTableClick={onTableClick}
         />
       </Canvas>
+      <ModeIndicator mode={s.mode} />
       <ShortcutsOverlay />
     </div>
   )

@@ -516,17 +516,17 @@ export default function Timeline() {
 
           {/* Timer */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 14px' }}>
-            <div style={{ textAlign: 'right' }}>
+            <div style={{ textAlign: 'right', minWidth: 64 }}>
               <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 1 }}>Écoulé</div>
-              <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--accent)', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
-                {simTime.toFixed(1)}<span style={{ fontSize: 11, fontWeight: 600, marginLeft: 2, color: 'var(--text3)' }}>s</span>
+              <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--accent)', lineHeight: 1, fontVariantNumeric: 'tabular-nums', fontFamily: 'monospace' }}>
+                {simTime.toFixed(1)}<span style={{ fontSize: 11, fontWeight: 600, marginLeft: 2, color: 'var(--text3)', fontFamily: 'inherit' }}>s</span>
               </div>
             </div>
-            <div style={{ width: 1, height: 28, background: 'var(--border)' }} />
-            <div style={{ textAlign: 'left' }}>
+            <div style={{ width: 1, height: 28, background: 'var(--border)', flexShrink: 0 }} />
+            <div style={{ textAlign: 'left', minWidth: 64 }}>
               <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 1 }}>Restant</div>
-              <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--text2)', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
-                {remaining.toFixed(1)}<span style={{ fontSize: 11, fontWeight: 600, marginLeft: 2, color: 'var(--text3)' }}>s</span>
+              <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--text2)', lineHeight: 1, fontVariantNumeric: 'tabular-nums', fontFamily: 'monospace' }}>
+                {remaining.toFixed(1)}<span style={{ fontSize: 11, fontWeight: 600, marginLeft: 2, color: 'var(--text3)', fontFamily: 'inherit' }}>s</span>
               </div>
             </div>
           </div>

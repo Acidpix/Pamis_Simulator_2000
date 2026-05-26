@@ -240,7 +240,7 @@ function SegRow({ seg, idx, robotColor, t, onRemove }) {
   )
 }
 
-function RobotTrajectory({ robot, defaultOpen, onPauseChange, onActionPauseChange, onHeadingChange, onRemoveWaypoint, t }) {
+function RobotTrajectory({ robot, defaultOpen, onPauseChange, onActionPauseChange, onHeadingChange, onRemoveWaypoint, onMoveWaypoint, t }) {
   const [open, setOpen] = useState(defaultOpen)
   const segments = useMemo(() => computeSegments(robot), [robot])
   const totalDistMm = segments.reduce((a,s) => a + s.dist, 0)
@@ -303,6 +303,24 @@ function RobotTrajectory({ robot, defaultOpen, onPauseChange, onActionPauseChang
                         borderRadius: '0 0 8px 8px',
                         display: 'flex', flexDirection: 'column', gap: 6,
                       }}>
+                        {onMoveWaypoint && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                            <span style={{ fontSize: 11, color: 'var(--text)', fontWeight: 700, minWidth: 14 }}>X</span>
+                            <input type="number"
+                              value={Math.round((robot.waypoints[i]?.x ?? 0) * 1000)}
+                              min={0} max={3000} step={1}
+                              onChange={e => { const v = parseInt(e.target.value); if (!isNaN(v)) onMoveWaypoint(i, v/1000, robot.waypoints[i]?.y ?? 0) }}
+                              style={{ flex: 1, padding: '3px 6px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface2)', fontSize: 12, color: 'var(--text)' }} />
+                            <span style={{ fontSize: 11, color: 'var(--text3)', minWidth: 18 }}>mm</span>
+                            <span style={{ fontSize: 11, color: 'var(--text)', fontWeight: 700, minWidth: 14 }}>Y</span>
+                            <input type="number"
+                              value={Math.round((robot.waypoints[i]?.y ?? 0) * 1000)}
+                              min={0} max={2000} step={1}
+                              onChange={e => { const v = parseInt(e.target.value); if (!isNaN(v)) onMoveWaypoint(i, robot.waypoints[i]?.x ?? 0, v/1000) }}
+                              style={{ flex: 1, padding: '3px 6px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface2)', fontSize: 12, color: 'var(--text)' }} />
+                            <span style={{ fontSize: 11, color: 'var(--text3)', minWidth: 18 }}>mm</span>
+                          </div>
+                        )}
                         {onPauseChange && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <span style={{ fontSize: 11, color: 'var(--text)', flex: 1, fontWeight: 700 }}>{t.pauseOnArrival}</span>
@@ -339,6 +357,7 @@ export default function RightPanel() {
   const updateWaypointPause = useSimStore(s => s.updateWaypointPause)
   const updateWaypointActionPause = useSimStore(s => s.updateWaypointActionPause)
   const updateWaypointHeading = useSimStore(s => s.updateWaypointHeading)
+  const moveWaypoint    = useSimStore(s => s.moveWaypoint)
   const removeWaypoint  = useSimStore(s => s.removeWaypoint)
   const robots          = useSimStore(s => s.robots)
   const selectedRobotId = useSimStore(s => s.selectedRobotId)
@@ -462,6 +481,7 @@ export default function RightPanel() {
           onPauseChange={(idx, v) => updateWaypointPause(r.id, idx, v)}
           onActionPauseChange={(idx, v) => updateWaypointActionPause(r.id, idx, v)}
           onHeadingChange={(idx, v) => updateWaypointHeading(r.id, idx, v)}
+          onMoveWaypoint={(idx, x, y) => moveWaypoint(r.id, idx, x, y)}
           onRemoveWaypoint={idx => { pushHistory({ robots, obstacles }); removeWaypoint(r.id, idx) }}
         />
       ))}

@@ -1,5 +1,5 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react'
-import { useSimStore, pushHistory, clearAutosave } from '../store/simStore.js'
+import { useSimStore, pushHistory, clearAutosave, obsStlCache } from '../store/simStore.js'
 import { useT } from '../i18n.js'
 
 const mToMm = m => Math.round(m * 1000)
@@ -185,6 +185,19 @@ function RobotProps({ robot, onUpdate, robots, obstacles, stlRef }) {
             <NumInput value={mToMm(robot.height)} min={10} max={500} step={1} unit="mm" onChange={v => ur({ height: mmToM(v) })} />
           </Field>
         </div>
+        <Field label="Orientation de départ">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <input type="range" min={0} max={359} step={1} value={norm360(robot.heading)}
+              onChange={e => ur({ heading: +e.target.value })}
+              style={{ flex: 1, accentColor: 'var(--purple)', minWidth: 0 }} />
+            <input
+              type="number" min={0} max={359} step={1}
+              value={Math.round(norm360(robot.heading))}
+              onChange={e => { const v = parseInt(e.target.value); if (!isNaN(v)) ur({ heading: ((v % 360) + 360) % 360 }) }}
+              style={{ width: 52, padding: '4px 6px', borderRadius: 'var(--r)', border: '1px solid var(--border)', background: 'var(--surface2)', fontSize: 13, fontWeight: 700, color: 'var(--text)', textAlign: 'center', flexShrink: 0 }} />
+            <span style={{ fontSize: 11, color: 'var(--text3)', flexShrink: 0 }}>°</span>
+          </div>
+        </Field>
       </SubSec>
 
       {/* Vitesse & Accélération — fermé */}
@@ -209,7 +222,7 @@ function RobotProps({ robot, onUpdate, robots, obstacles, stlRef }) {
         </div>
       </SubSec>
 
-      {/* Déplacement — fermé — inclut maintenant orientation */}
+      {/* Déplacement — fermé */}
       <SubSec title="Déplacement">
         <Field label="Délai de départ">
           <NumInput value={robot.startDelay} min={0} max={60} step={0.5} unit="s" onChange={v => ur({ startDelay: v })} />
@@ -220,19 +233,6 @@ function RobotProps({ robot, onUpdate, robots, obstacles, stlRef }) {
             onChange={v => ur({ waypointMode: v })} />
         </Field>
         <Toggle value={!!robot.holonomic} onChange={v => ur({ holonomic: v })} label="Holonome (ne tourne pas)" />
-        <Field label="Orientation de départ">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <input type="range" min={0} max={359} step={1} value={norm360(robot.heading)}
-              onChange={e => ur({ heading: +e.target.value })}
-              style={{ flex: 1, accentColor: 'var(--purple)', minWidth: 0 }} />
-            <input
-              type="number" min={0} max={359} step={1}
-              value={Math.round(norm360(robot.heading))}
-              onChange={e => { const v = parseInt(e.target.value); if (!isNaN(v)) ur({ heading: ((v % 360) + 360) % 360 }) }}
-              style={{ width: 52, padding: '4px 6px', borderRadius: 'var(--r)', border: '1px solid var(--border)', background: 'var(--surface2)', fontSize: 13, fontWeight: 700, color: 'var(--text)', textAlign: 'center', flexShrink: 0 }} />
-            <span style={{ fontSize: 11, color: 'var(--text3)', flexShrink: 0 }}>°</span>
-          </div>
-        </Field>
       </SubSec>
 
       {/* Collision — fermé */}
@@ -242,9 +242,20 @@ function RobotProps({ robot, onUpdate, robots, obstacles, stlRef }) {
             options={[{ v:'circle', label:'○ Cercle' }, { v:'rect', label:'▭ Rect' }]}
             onChange={v => ur({ collisionShape: v })} />
         </Field>
-        <Field label="Rayon de collision">
-          <NumInput value={mToMm(robot.radius)} min={10} max={400} step={1} unit="mm" onChange={v => ur({ radius: mmToM(v) })} />
-        </Field>
+        {(robot.collisionShape ?? 'circle') === 'circle' ? (
+          <Field label="Rayon de collision">
+            <NumInput value={mToMm(robot.radius)} min={10} max={400} step={1} unit="mm" onChange={v => ur({ radius: mmToM(v) })} />
+          </Field>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <Field label="Collision X" half>
+              <NumInput value={mToMm(robot.collisionW ?? robot.width)} min={10} max={800} step={1} unit="mm" onChange={v => ur({ collisionW: mmToM(v) })} />
+            </Field>
+            <Field label="Collision Y" half>
+              <NumInput value={mToMm(robot.collisionH ?? robot.height)} min={10} max={800} step={1} unit="mm" onChange={v => ur({ collisionH: mmToM(v) })} />
+            </Field>
+          </div>
+        )}
       </SubSec>
 
       {/* Apparence — fermé — inclut maintenant la couleur */}
@@ -483,8 +494,10 @@ export default function LeftPanel() {
   const selectObstacle   = useSimStore(s => s.selectObstacle)
   const updateObstacle   = useSimStore(s => s.updateObstacle)
 
-  const stlRef = useRef()
-  const bgRef  = useRef()
+  const stlRef    = useRef()
+  const obsStlRef = useRef()
+  const bgRef     = useRef()
+  const setObsStlData = useSimStore(s => s.setObsStlData)
   const [tab, setTab] = useState('robots')
   const openSettingsSignal = useSimStore(s => s.openSettingsSignal)
   useEffect(() => { if (openSettingsSignal > 0) setTab('settings') }, [openSettingsSignal])
@@ -520,6 +533,12 @@ export default function LeftPanel() {
     const file = e.target.files[0]; if (!file) return
     const reader = new FileReader()
     reader.onload = ev => setStlData(selectedRobotId, ev.target.result)
+    reader.readAsArrayBuffer(file); e.target.value = ''
+  }
+  const handleObsStlImport = e => {
+    const file = e.target.files[0]; if (!file) return
+    const reader = new FileReader()
+    reader.onload = ev => setObsStlData(selectedObsId, ev.target.result)
     reader.readAsArrayBuffer(file); e.target.value = ''
   }
   const handleBgImport = e => {
@@ -681,6 +700,7 @@ export default function LeftPanel() {
                 </div>
               </SectionCard>
 
+              <input type="file" ref={obsStlRef} accept=".stl" onChange={handleObsStlImport} style={{ display: 'none' }} />
               {selObs && (
                 <SectionCard accent="var(--yellow)">
                   <div style={{ padding: '9px 12px 12px' }}>
@@ -689,33 +709,70 @@ export default function LeftPanel() {
                       <input value={selObs.name} onChange={e => uo({ name: e.target.value })}
                         style={{ flex: 1, padding: '6px 8px', borderRadius: 'var(--r)', border: '1px solid var(--border)', background: 'var(--surface2)', fontSize: 13, fontWeight: 700, minWidth: 0, color: 'var(--text)' }} />
                     </div>
-                    <Field label="Forme visuelle">
-                      <SegToggle value={selObs.shape}
-                        options={[{ v:'rect', label:'▭ Rectangle' }, { v:'circle', label:'○ Cercle' }]}
-                        onChange={v => uo({ shape: v })} />
-                    </Field>
-                    <Field label="Forme de collision">
-                      <SegToggle value={selObs.collisionShape ?? 'rect'}
-                        options={[{ v:'rect', label:'▭ Rect' }, { v:'circle', label:'○ Cercle' }]}
-                        onChange={v => uo({ collisionShape: v })} />
-                    </Field>
-                    {selObs.shape === 'rect' ? (
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                        <Field label="Largeur" half>
-                          <NumInput value={mToMm(selObs.width)} min={10} max={2000} step={1} unit="mm" onChange={v => uo({ width: mmToM(v), radius: mmToM(v)/2/1000 })} />
-                        </Field>
-                        <Field label="Profondeur" half>
-                          <NumInput value={mToMm(selObs.height)} min={10} max={2000} step={1} unit="mm" onChange={v => uo({ height: mmToM(v) })} />
-                        </Field>
-                      </div>
-                    ) : (
-                      <Field label="Rayon">
-                        <NumInput value={mToMm(selObs.radius)} min={10} max={1000} step={1} unit="mm" onChange={v => uo({ radius: mmToM(v), width: mmToM(v)*2, height: mmToM(v)*2 })} />
+
+                    <SubSec title="Dimensions" defaultOpen={true}>
+                      <Field label="Forme visuelle">
+                        <SegToggle value={selObs.shape}
+                          options={[{ v:'rect', label:'▭ Rectangle' }, { v:'circle', label:'○ Cercle' }]}
+                          onChange={v => uo({ shape: v })} />
                       </Field>
-                    )}
-                    <Field label={`Transparence  ${Math.round((1-(selObs.opacity??1))*100)}%`}>
-                      <Slider value={1-(selObs.opacity??1)} min={0} max={0.95} step={0.05} onChange={v => uo({ opacity: 1-v })} accent="var(--yellow)" />
-                    </Field>
+                      <Field label="Forme de collision">
+                        <SegToggle value={selObs.collisionShape ?? 'rect'}
+                          options={[{ v:'rect', label:'▭ Rect' }, { v:'circle', label:'○ Cercle' }]}
+                          onChange={v => uo({ collisionShape: v })} />
+                      </Field>
+                      {selObs.shape === 'rect' ? (
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                          <Field label="Largeur" half>
+                            <NumInput value={mToMm(selObs.width)} min={10} max={2000} step={1} unit="mm" onChange={v => uo({ width: mmToM(v), radius: mmToM(v)/2/1000 })} />
+                          </Field>
+                          <Field label="Profondeur" half>
+                            <NumInput value={mToMm(selObs.height)} min={10} max={2000} step={1} unit="mm" onChange={v => uo({ height: mmToM(v) })} />
+                          </Field>
+                        </div>
+                      ) : (
+                        <Field label="Rayon">
+                          <NumInput value={mToMm(selObs.radius)} min={10} max={1000} step={1} unit="mm" onChange={v => uo({ radius: mmToM(v), width: mmToM(v)*2, height: mmToM(v)*2 })} />
+                        </Field>
+                      )}
+                      <Field label="Rotation">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <input type="range" min={0} max={359} step={1} value={((selObs.heading??0) % 360 + 360) % 360}
+                            onChange={e => uo({ heading: +e.target.value })}
+                            style={{ flex: 1, accentColor: 'var(--yellow)', minWidth: 0 }} />
+                          <input type="number" min={0} max={359} step={1}
+                            value={Math.round(((selObs.heading??0) % 360 + 360) % 360)}
+                            onChange={e => { const v = parseInt(e.target.value); if (!isNaN(v)) uo({ heading: ((v % 360) + 360) % 360 }) }}
+                            style={{ width: 52, padding: '4px 6px', borderRadius: 'var(--r)', border: '1px solid var(--border)', background: 'var(--surface2)', fontSize: 13, fontWeight: 700, color: 'var(--text)', textAlign: 'center', flexShrink: 0 }} />
+                          <span style={{ fontSize: 11, color: 'var(--text3)', flexShrink: 0 }}>°</span>
+                        </div>
+                      </Field>
+                    </SubSec>
+
+                    <SubSec title="Apparence">
+                      <Field label={`Transparence  ${Math.round((1-(selObs.opacity??1))*100)}%`}>
+                        <Slider value={1-(selObs.opacity??1)} min={0} max={0.95} step={0.05} onChange={v => uo({ opacity: 1-v })} accent="var(--yellow)" />
+                      </Field>
+                    </SubSec>
+
+                    <SubSec title="Géométrie STL">
+                      <ActionBtn full onClick={() => obsStlRef.current?.click()}>
+                        📦 {selObs.hasStl ? '✓ STL importé — changer' : 'Importer fichier STL'}
+                      </ActionBtn>
+                      {selObs.hasStl && (
+                        <div style={{ marginTop: 10 }}>
+                          <Label>Rotation STL</Label>
+                          {[['X', selObs.stlRotX??-90], ['Y', selObs.stlRotY??0], ['Z', selObs.stlRotZ??0]].map(([ax, val]) => (
+                            <div key={ax} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text3)', width: 14, flexShrink: 0 }}>{ax}</span>
+                              <div style={{ flex: 1 }}>
+                                <NumInput value={val} min={-360} max={360} step={15} unit="°" onChange={v => uo({ [`stlRot${ax}`]: v })} />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </SubSec>
                   </div>
                 </SectionCard>
               )}
