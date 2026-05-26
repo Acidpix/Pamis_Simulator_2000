@@ -320,8 +320,7 @@ function GitPickerModal({ t, onClose, onPick }) {
 }
 
 function GitPickerList({ t, onFiles, onError, onLoadingChange, selected, onSelect }) {
-  const gitConfig  = useSimStore(s => s.gitConfig)
-  const oauthToken = useSimStore(s => s.oauthToken)
+  const gitConfig = useSimStore(s => s.gitConfig)
   const [files, setFiles] = useState(null)
 
   useEffect(() => {
@@ -330,13 +329,12 @@ function GitPickerList({ t, onFiles, onError, onLoadingChange, selected, onSelec
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        repoUrl:    gitConfig.repoUrl,
-        authType:   gitConfig.authType,
-        token:      gitConfig.token,
-        username:   gitConfig.username,
-        password:   gitConfig.password,
-        oauthToken,
-        branch:     gitConfig.branch || 'main',
+        repoUrl:  gitConfig.repoUrl,
+        authType: gitConfig.authType,
+        token:    gitConfig.token,
+        username: gitConfig.username,
+        password: gitConfig.password,
+        branch:   gitConfig.branch || 'main',
       }),
     })
       .then(r => r.json())
@@ -430,7 +428,6 @@ export default function Toolbar() {
   const redo         = useSimStore(s => s.redo)
 
   const gitConfig          = useSimStore(s => s.gitConfig)
-  const oauthToken         = useSimStore(s => s.oauthToken)
   const triggerOpenSettings= useSimStore(s => s.triggerOpenSettings)
 
   const t = useT()
@@ -460,11 +457,7 @@ export default function Toolbar() {
     }, 30)
   }, [])
 
-  const isGitConfigured = () => {
-    if (!gitConfig.repoUrl.trim() || !gitConfig.filename.trim()) return false
-    if (gitConfig.authType === 'oauth' && !oauthToken) return false
-    return true
-  }
+  const isGitConfigured = () => gitConfig.repoUrl.trim() !== '' && gitConfig.filename.trim() !== ''
 
   const handleGitSave = () => {
     if (!isGitConfigured()) {
@@ -494,13 +487,12 @@ export default function Toolbar() {
           filename:   gitConfig.filename,
           content,
           message,
-          repoUrl:    gitConfig.repoUrl,
-          authType:   gitConfig.authType,
-          token:      gitConfig.token,
-          username:   gitConfig.username,
-          password:   gitConfig.password,
-          oauthToken,
-          branch:     gitConfig.branch || 'main',
+          repoUrl:  gitConfig.repoUrl,
+          authType: gitConfig.authType,
+          token:    gitConfig.token,
+          username: gitConfig.username,
+          password: gitConfig.password,
+          branch:   gitConfig.branch || 'main',
         }),
       })
       setGitStep('gitStepCommit'); animProgress(30, 65, 800)
@@ -536,13 +528,12 @@ export default function Toolbar() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           filename,
-          repoUrl:    gitConfig.repoUrl,
-          authType:   gitConfig.authType,
-          token:      gitConfig.token,
-          username:   gitConfig.username,
-          password:   gitConfig.password,
-          oauthToken,
-          branch:     gitConfig.branch || 'main',
+          repoUrl:  gitConfig.repoUrl,
+          authType: gitConfig.authType,
+          token:    gitConfig.token,
+          username: gitConfig.username,
+          password: gitConfig.password,
+          branch:   gitConfig.branch || 'main',
         }),
       })
       const data = await res.json()
