@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState, useMemo, useCallback, Suspense, memo } from 'react'
 import { useT } from '../i18n.js'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { OrthographicCamera, PerspectiveCamera, OrbitControls, Line, Html, Text, useTexture } from '@react-three/drei'
+import { OrthographicCamera, PerspectiveCamera, OrbitControls, Line, Html, Text, useTexture, Billboard } from '@react-three/drei'
 import * as THREE from 'three'
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
 import { useSimStore, getRobotPose, stlCache, pushHistory } from '../store/simStore.js'
@@ -356,12 +356,14 @@ function RobotMesh({ robot, selected, simTime, onPointerDown, is3d }) {
         <meshBasicMaterial color="#ffffff" />
       </mesh>
 
-      <Chip
-        position={[0, robot.height/2 + 0.09, is3d ? robotH/2 : 0.005]}
-        text={robot.name}
-        bg={robot.color}
-        fontSize={0.05}
-      />
+      <Billboard follow={true} lockX={false} lockY={false} lockZ={true}>
+        <Chip
+          position={[0, robot.height/2 + 0.09, is3d ? robotH/2 : 0.005]}
+          text={robot.name}
+          bg={robot.color}
+          fontSize={0.05}
+        />
+      </Billboard>
       {pose.inAction && <ActionLabel position={[0, 0, is3d ? robotH : 0.12]} />}
     </group>
   )
