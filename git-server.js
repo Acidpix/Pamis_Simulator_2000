@@ -75,7 +75,7 @@ const server = http.createServer(async (req, res) => {
         console.log('  → git commit…')
         await runGit(`git -c user.email="pamis@local" -c user.name="PAMIS" commit -m "${message.replace(/"/g, '\\"').replace(/\r?\n/g, ' ')}"`, repo)
         console.log('  → git push…')
-        await runGit(`git push origin HEAD:refs/heads/${branch}`, repo)
+        await runGit(`git push --no-thin origin HEAD:refs/heads/${branch}`, repo)
         console.log('  ✓ commit+push OK')
         json({ ok: true })
 
