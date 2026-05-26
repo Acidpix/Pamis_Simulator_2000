@@ -62,7 +62,7 @@ const server = http.createServer(async (req, res) => {
         console.log('  → git commit…')
         await runGit(`git commit -m "${message.replace(/"/g, '\\"').replace(/\r?\n/g, ' ')}"`, repoDir)
         console.log('  → git push…')
-        await runGit(`git push "${buildGitUrl(repoUrl, authType, token, username, password)}" HEAD:refs/heads/${branch}`, repoDir)
+        await runGit(`git push --force "${buildGitUrl(repoUrl, authType, token, username, password)}" HEAD:refs/heads/${branch}`, repoDir)
         console.log('  ✓ commit+push OK')
         json({ ok: true })
 
