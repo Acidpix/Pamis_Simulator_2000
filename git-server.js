@@ -82,7 +82,7 @@ const server = http.createServer(async (req, res) => {
   })
 })
 
-server.listen(PORT, () => {
-  console.log(`✅  Git server → http://localhost:${PORT}`)
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅  Git server → http://0.0.0.0:${PORT}  (toutes interfaces)`)
   console.log(`    Répertoire : ${__dirname}`)
 })
