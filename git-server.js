@@ -55,10 +55,15 @@ const server = http.createServer(async (req, res) => {
 
       if (req.url === '/git/commit') {
         const { filename, content, message, repoUrl, authType, token = '', username = '', password = '', branch = 'main' } = data
+        console.log(`  → commit: file="${filename}" branch="${branch}" repoUrl="${repoUrl.replace(/:[^@]*@/, ':***@')}"`)
         writeFileSync(resolve(repoDir, filename), content, 'utf8')
+        console.log('  → git add…')
         await runGit(`git add "${filename.replace(/\\/g, '/').replace(/"/g, '\\"')}"`, repoDir)
+        console.log('  → git commit…')
         await runGit(`git commit -m "${message.replace(/"/g, '\\"').replace(/\r?\n/g, ' ')}"`, repoDir)
+        console.log('  → git push…')
         await runGit(`git push "${buildGitUrl(repoUrl, authType, token, username, password)}" HEAD:refs/heads/${branch}`, repoDir)
+        console.log('  ✓ commit+push OK')
         json({ ok: true })
 
       } else if (req.url === '/git/pull') {
