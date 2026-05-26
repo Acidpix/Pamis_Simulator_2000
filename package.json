@@ -1,12 +1,13 @@
 {
   "name": "pamis-simulator-2000",
-  "version": "1.0.0",
+  "version": "1.5.0",
   "description": "Simulateur de trajectoires PAMIS SIMULATOR 2000 — Coupe de France de Robotique",
   "type": "module",
   "scripts": {
     "dev": "vite --host",
     "build": "vite build",
-    "preview": "vite preview --host"
+    "preview": "vite preview --host",
+    "git-server": "node git-server.js"
   },
   "dependencies": {
     "@react-three/drei": "^9.109.2",

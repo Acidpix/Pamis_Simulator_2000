@@ -3,6 +3,14 @@ import { immer } from 'zustand/middleware/immer'
 
 export const stlCache = new Map()
 export const AUTOSAVE_KEY = 'pamis_autosave'
+export const GIT_CONFIG_KEY = 'pamis_git_config'
+
+function loadGitConfigFromStorage() {
+  try {
+    const raw = localStorage.getItem(GIT_CONFIG_KEY)
+    return raw ? JSON.parse(raw) : {}
+  } catch { return {} }
+}
 
 // ── Undo / Redo ──
 const undoStack = [], redoStack = []
@@ -380,6 +388,19 @@ export const useSimStore = create(immer((set, get) => ({
   setCollisions:       c => set(s => { s.collisions=c }),
   setObsCollisions:    c => set(s => { s.obsCollisions=c }),
   setBorderCollisions: c => set(s => { s.borderCollisions=c }),
+
+  gitConfig: {
+    repoUrl: '', filename: 'pamis_config.json', branch: 'main',
+    authType: 'token', token: '', username: '', password: '',
+    ...loadGitConfigFromStorage(),
+  },
+  setGitConfig: patch => set(s => {
+    Object.assign(s.gitConfig, patch)
+    try { localStorage.setItem(GIT_CONFIG_KEY, JSON.stringify(s.gitConfig)) } catch {}
+  }),
+
+  openSettingsSignal: 0,
+  triggerOpenSettings: () => set(s => { s.openSettingsSignal++ }),
 
   undo: () => set(s => {
     if (!undoStack.length) return

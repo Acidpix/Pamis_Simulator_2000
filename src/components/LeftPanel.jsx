@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback } from 'react'
+import React, { useRef, useState, useCallback, useEffect } from 'react'
 import { useSimStore, pushHistory, clearAutosave } from '../store/simStore.js'
 import { useT } from '../i18n.js'
 
@@ -337,12 +337,12 @@ function ClearAutosaveBtn({ t }) {
 }
 
 const TABS = [
-  { id: 'robots',    icon: '🤖', label: 'Robots'    },
-  { id: 'obstacles', icon: '🧱', label: 'Obstacles' },
-  { id: 'scene',     icon: '🏁', label: 'Table'     },
+  { id: 'robots',    icon: '🤖', labelKey: 'robots'      },
+  { id: 'obstacles', icon: '🧱', labelKey: 'obstacles'   },
+  { id: 'settings',  icon: '⚙️', labelKey: 'settingsTab' },
 ]
 
-function TabBar({ active, onChange }) {
+function TabBar({ active, onChange, t }) {
   return (
     <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--surface)', flexShrink: 0 }}>
       {TABS.map(tab => {
@@ -356,10 +356,98 @@ function TabBar({ active, onChange }) {
             transition: 'all .12s', marginBottom: -1,
           }}>
             <span style={{ fontSize: 16 }}>{tab.icon}</span>
-            <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em' }}>{tab.label}</span>
+            <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em' }}>{t[tab.labelKey]}</span>
           </button>
         )
       })}
+    </div>
+  )
+}
+
+function GitConfigCard({ t }) {
+  const gitConfig      = useSimStore(s => s.gitConfig)
+  const setGitConfig   = useSimStore(s => s.setGitConfig)
+  const g = gitConfig
+
+  return (
+    <div style={{
+      background: 'var(--surface)', borderRadius: 'var(--r2)',
+      border: '1px solid var(--border)',
+      borderLeft: '3px solid var(--purple)',
+      marginBottom: 8, overflow: 'hidden', boxShadow: 'var(--shadow-sm)',
+    }}>
+      <div style={{ padding: '9px 12px 12px' }}>
+        <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--purple)', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+          🐙 {t.gitConfigTitle}
+        </div>
+
+        <Label>{t.gitRepoUrl}</Label>
+        <input
+          value={g.repoUrl} onChange={e => setGitConfig({ repoUrl: e.target.value })}
+          placeholder="https://github.com/user/repo.git"
+          style={{ width: '100%', marginBottom: 8, padding: '5px 8px', borderRadius: 'var(--r)', border: '1px solid var(--border)', background: 'var(--surface2)', fontSize: 12, color: 'var(--text)', boxSizing: 'border-box' }}
+        />
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+          <div>
+            <Label>{t.gitFilename}</Label>
+            <input
+              value={g.filename} onChange={e => setGitConfig({ filename: e.target.value })}
+              placeholder="pamis_config.json"
+              style={{ width: '100%', padding: '5px 8px', borderRadius: 'var(--r)', border: '1px solid var(--border)', background: 'var(--surface2)', fontSize: 12, color: 'var(--text)', boxSizing: 'border-box' }}
+            />
+          </div>
+          <div>
+            <Label>{t.gitBranch}</Label>
+            <input
+              value={g.branch} onChange={e => setGitConfig({ branch: e.target.value })}
+              placeholder="main"
+              style={{ width: '100%', padding: '5px 8px', borderRadius: 'var(--r)', border: '1px solid var(--border)', background: 'var(--surface2)', fontSize: 12, color: 'var(--text)', boxSizing: 'border-box' }}
+            />
+          </div>
+        </div>
+
+        <Label>{t.gitAuthType}</Label>
+        <div style={{ display: 'flex', gap: 3, background: 'var(--surface3)', borderRadius: 'var(--r)', padding: 3, marginBottom: 8 }}>
+          {[{ v:'token', label: t.gitAuthToken }, { v:'userpass', label: t.gitAuthUserpass }].map(o => (
+            <button key={o.v} onClick={() => setGitConfig({ authType: o.v })} style={{
+              flex: 1, padding: '4px 0', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer',
+              border: 'none', transition: 'all .15s',
+              background: g.authType === o.v ? 'var(--surface)' : 'transparent',
+              color: g.authType === o.v ? 'var(--purple)' : 'var(--text3)',
+              boxShadow: g.authType === o.v ? 'var(--shadow-sm)' : 'none',
+            }}>{o.label}</button>
+          ))}
+        </div>
+
+        {g.authType === 'token' ? (
+          <>
+            <Label>{t.gitToken}</Label>
+            <input
+              type="password" value={g.token} onChange={e => setGitConfig({ token: e.target.value })}
+              placeholder="ghp_xxxxxxxxxxxx"
+              style={{ width: '100%', marginBottom: 8, padding: '5px 8px', borderRadius: 'var(--r)', border: '1px solid var(--border)', background: 'var(--surface2)', fontSize: 12, color: 'var(--text)', boxSizing: 'border-box' }}
+            />
+          </>
+        ) : (
+          <>
+            <Label>{t.gitUsername}</Label>
+            <input
+              value={g.username} onChange={e => setGitConfig({ username: e.target.value })}
+              style={{ width: '100%', marginBottom: 6, padding: '5px 8px', borderRadius: 'var(--r)', border: '1px solid var(--border)', background: 'var(--surface2)', fontSize: 12, color: 'var(--text)', boxSizing: 'border-box' }}
+            />
+            <Label>{t.gitPassword}</Label>
+            <input
+              type="password" value={g.password} onChange={e => setGitConfig({ password: e.target.value })}
+              style={{ width: '100%', marginBottom: 8, padding: '5px 8px', borderRadius: 'var(--r)', border: '1px solid var(--border)', background: 'var(--surface2)', fontSize: 12, color: 'var(--text)', boxSizing: 'border-box' }}
+            />
+          </>
+        )}
+
+        <p style={{ fontSize: 10, color: 'var(--text3)', lineHeight: 1.4, margin: 0 }}>
+          {t.gitConfigHint}
+        </p>
+      </div>
     </div>
   )
 }
@@ -398,6 +486,8 @@ export default function LeftPanel() {
   const stlRef = useRef()
   const bgRef  = useRef()
   const [tab, setTab] = useState('robots')
+  const openSettingsSignal = useSimStore(s => s.openSettingsSignal)
+  useEffect(() => { if (openSettingsSignal > 0) setTab('settings') }, [openSettingsSignal])
   // Sections de propriétés ouvertes (indépendamment)
   const [openRobots, setOpenRobots] = useState(new Set())
   const t = useT()
@@ -463,7 +553,7 @@ export default function LeftPanel() {
     <div style={{ display: 'flex', flexShrink: 0, height: '100%' }}>
       <div style={{ width: panelW, height: '100%', display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border)', background: 'var(--bg)', overflow: 'hidden' }}>
 
-        <TabBar active={tab} onChange={setTab} />
+        <TabBar active={tab} onChange={setTab} t={t} />
 
         <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: 10 }}>
 
@@ -632,9 +722,10 @@ export default function LeftPanel() {
             </>
           )}
 
-          {/* ── Tab Scène ── */}
-          {tab === 'scene' && (
+          {/* ── Tab Settings ── */}
+          {tab === 'settings' && (
             <>
+            <GitConfigCard t={t} />
             <SectionCard accent="var(--green)">
               <div style={{ padding: '9px 12px 12px' }}>
                 <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--green)', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 12 }}>

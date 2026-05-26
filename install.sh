@@ -6,6 +6,7 @@ set -euo pipefail
 
 # ── Paramètres ───────────────────────────────────────────────────────────────
 APP_NAME="pamis-simulator-2000"
+GIT_SERVICE="pamis-git-server"
 REPO_URL="https://github.com/Acidpix/Pamis_Simulator_2000.git"
 INSTALL_DIR="/opt/${APP_NAME}"
 SERVICE_FILE="/etc/systemd/system/${APP_NAME}.service"
@@ -128,13 +129,47 @@ EOF
 systemctl daemon-reload
 systemctl enable --now "${APP_NAME}"
 
+# ── Service systemd git-server ─────────────────────────────────────────────────
+NODE_BIN=$(command -v node)
+GIT_SERVICE_FILE="/etc/systemd/system/${GIT_SERVICE}.service"
+
+cat > "${GIT_SERVICE_FILE}" <<EOF
+[Unit]
+Description=Pamis Simulator 2000 — Git server
+After=network.target
+
+[Service]
+Type=simple
+User=${RUN_AS}
+WorkingDirectory=${INSTALL_DIR}
+Environment=NODE_ENV=production
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=${NODE_BIN} ${INSTALL_DIR}/git-server.js
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=${GIT_SERVICE}
+
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable --now "${GIT_SERVICE}"
+
 echo ""
-echo "✓ Service démarré : systemctl status ${APP_NAME}"
-echo "✓ Accessible sur  : http://0.0.0.0:${PORT}"
+echo "✓ App  démarrée : systemctl status ${APP_NAME}"
+echo "✓ App  port     : http://0.0.0.0:${PORT}"
+echo "✓ Git server    : systemctl status ${GIT_SERVICE}  (port 3001)"
 echo ""
 echo "Commandes utiles :"
-echo "  journalctl -u ${APP_NAME} -f      # logs en direct"
-echo "  systemctl restart ${APP_NAME}     # redémarrage"
-echo "  systemctl stop    ${APP_NAME}     # arrêt"
+echo "  journalctl -u ${APP_NAME} -f          # logs app"
+echo "  journalctl -u ${GIT_SERVICE} -f       # logs git server"
+echo "  systemctl restart ${APP_NAME}         # redémarrage app"
+echo "  systemctl restart ${GIT_SERVICE}      # redémarrage git server"
 echo ""
 echo "Pour mettre à jour : sudo bash ${INSTALL_DIR}/install.sh"

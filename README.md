@@ -1,4 +1,4 @@
-# TURBO PAMIS SIMULATOR 2000 v1.4
+# TURBO PAMIS SIMULATOR 2000 v1.5
 
 Simulateur de trajectoires de robots pour la **Coupe de France de Robotique**.  
 Permet de planifier, visualiser et exporter les trajectoires de plusieurs robots sur une table 3×2 m.
@@ -47,9 +47,16 @@ Permet de planifier, visualiser et exporter les trajectoires de plusieurs robots
 ### Sauvegarde automatique / Auto-save
 - **Sauvegarde automatique** dans le navigateur (localStorage) à chaque action — survit aux rafraîchissements et crashes
 - Restauration automatique au démarrage
-- Bouton **🗑 Effacer la sauvegarde** (onglet Table, maintenir 3 s) pour réinitialiser
+- Bouton **🗑 Effacer la sauvegarde** (onglet Réglages, maintenir 3 s) pour réinitialiser
 
-### Table & Affichage / Table & Display (onglet 🏁 Table)
+### Intégration Git / Git Integration (onglet ⚙️ Réglages)
+- **Sauvegarder → Git (commit)** : écrit le fichier JSON dans le repo local, commit et push automatiques vers GitHub / GitLab
+- **Ouvrir → Git (pull)** : liste tous les fichiers JSON présents sur le repo distant, sélection visuelle, pull + chargement automatique
+- Authentification : **token** (GitHub `ghp_…` / GitLab `glpat-…`) ou **login / mot de passe**
+- Configuration : URL du dépôt, nom du fichier, branche, identifiants — persistés dans le localStorage
+- Nécessite le serveur local `git-server.js` (voir section Développement)
+
+### Table & Affichage / Table & Display (onglet ⚙️ Réglages)
 - Image de fond par défaut : `public/table_FINALE_1.jpg`
 - Couleur de surface de la table configurable
 - Couleur d'arrière-plan (hors table) configurable
@@ -61,8 +68,10 @@ Permet de planifier, visualiser et exporter les trajectoires de plusieurs robots
 - Import de géométrie 3D `.stl` avec contrôle de rotation X / Y / Z
 
 ### Sauvegarde / Save & Export
-- **Sauvegarder** : JSON complet (robots, obstacles, configuration)
-- **Ouvrir** : import d'une sauvegarde JSON
+- **Sauvegarder → Local** : téléchargement d'un JSON complet (robots, obstacles, configuration)
+- **Sauvegarder → Git** : commit + push vers le dépôt Git configuré
+- **Ouvrir → Local** : import d'une sauvegarde JSON depuis le disque
+- **Ouvrir → Git** : liste les fichiers JSON du dépôt distant, pull + chargement
 - **Exporter trajectoires JSON** : JSON des waypoints/segments (panneau droit, pour intégration embarquée)
 - **Import Gazebo SDF** : import depuis un fichier `.world` / `.sdf` / `.xml` (acteurs → robots, modèles → obstacles, reconstruction automatique des waypoints depuis les trajectoires denses)
 - **Export Gazebo SDF** : export de la scène au format Gazebo SDF (panneau droit)
@@ -90,6 +99,31 @@ Le script :
 npm install
 npm run dev
 ```
+
+### Intégration Git — serveur local
+
+La fonctionnalité Git nécessite un serveur Node.js local qui exécute les commandes `git` côté machine (le navigateur ne peut pas appeler git directement).
+
+```bash
+# Dans un second terminal (en parallèle du dev server)
+node git-server.js
+```
+
+Le serveur écoute sur **http://localhost:3001**.  
+Il n'a aucune dépendance externe — uniquement les modules Node.js natifs (`http`, `fs`, `child_process`).
+
+**Configuration** (onglet ⚙️ Réglages dans l'app) :
+| Champ | Exemple |
+|---|---|
+| URL du dépôt | `https://github.com/user/repo.git` |
+| Nom du fichier | `pamis_config.json` |
+| Branche | `main` |
+| Token (GitHub) | `ghp_xxxxxxxxxxxx` |
+| Token (GitLab) | `glpat-xxxxxxxxxxxx` |
+
+> Les identifiants sont stockés dans le `localStorage` du navigateur (non transmis hors de votre machine).
+
+**En production** : si tu utilises `serve` + `git-server.js` simultanément, tu peux créer deux services systemd (un pour `serve`, un pour `node git-server.js`). Voir le script `install.sh`.
 
 ---
 
