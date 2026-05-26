@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
-import { useSimStore, pushHistory } from '../store/simStore.js'
+import { useSimStore, pushHistory, computeSegments } from '../store/simStore.js'
 import { useT } from '../i18n.js'
 import { importGazeboSDF } from '../utils/importGazeboSDF.js'
 import { generateGazeboSDF } from './RightPanel.jsx'
@@ -83,19 +83,24 @@ function BtnGroup({ children }) {
   )
 }
 
-function BtnGroupItem({ active, onClick, children, accent }) {
+function BtnGroupItem({ active, onClick, children, color }) {
+  const bg = active ? (color || 'var(--surface3)') : 'var(--surface)'
+  const fg = active ? (color ? '#fff' : 'var(--text)') : 'var(--text3)'
   return (
     <button onClick={onClick} style={{
       padding: '0 10px', height: 32, fontSize: 12, fontWeight: 700, cursor: 'pointer',
       border: 'none', borderRight: '1px solid var(--border)', lineHeight: 1,
-      background: active ? (accent ? 'var(--accent)' : 'var(--surface3)') : 'var(--surface)',
-      color: active ? (accent ? '#fff' : 'var(--text)') : 'var(--text3)',
+      background: bg, color: fg,
+      boxShadow: active && color ? `0 0 8px ${color}55` : 'none',
       transition: 'all .12s', flexShrink: 0,
     }}>
       {children}
     </button>
   )
 }
+
+// Pastel accent colors for dropdown items
+const DROPDOWN_COLORS = ['#6366f1', '#9b59b6', '#16a34a', '#f97316', '#0ea5e9', '#ec4899']
 
 function DropdownBtn({ label, items, disabled }) {
   const [open, setOpen] = useState(false)
@@ -131,25 +136,30 @@ function DropdownBtn({ label, items, disabled }) {
           position: 'absolute', top: '100%', left: 0, marginTop: 4, zIndex: 1000,
           background: 'var(--surface)', border: '1px solid var(--border)',
           borderRadius: 'var(--r)', boxShadow: '0 8px 24px rgba(0,0,0,.18)',
-          minWidth: 180, overflow: 'hidden',
+          minWidth: 190, overflow: 'hidden',
         }}>
-          {items.map((item, i) => (
-            <button
-              key={i}
-              onClick={() => { setOpen(false); item.action() }}
-              style={{
-                display: 'block', width: '100%', textAlign: 'left',
-                padding: '9px 14px', border: 'none', background: 'transparent',
-                color: 'var(--text)', fontSize: 13, fontWeight: 500, cursor: 'pointer',
-                borderBottom: i < items.length - 1 ? '1px solid var(--border)' : 'none',
-                transition: 'background .1s',
-              }}
-              onMouseEnter={e => e.currentTarget.style.background = 'var(--surface2)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-            >
-              {item.label}
-            </button>
-          ))}
+          {items.map((item, i) => {
+            const accent = DROPDOWN_COLORS[i % DROPDOWN_COLORS.length]
+            return (
+              <button
+                key={i}
+                onClick={() => { setOpen(false); item.action() }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  width: '100%', textAlign: 'left',
+                  padding: '9px 14px', border: 'none', background: 'transparent',
+                  color: 'var(--text)', fontSize: 13, fontWeight: 500, cursor: 'pointer',
+                  borderBottom: i < items.length - 1 ? '1px solid var(--border)' : 'none',
+                  transition: 'background .1s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = `${accent}18`; e.currentTarget.style.color = accent }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text)' }}
+              >
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: accent, flexShrink: 0 }} />
+                {item.label}
+              </button>
+            )
+          })}
         </div>
       )}
     </div>
@@ -586,10 +596,10 @@ export default function Toolbar() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
         {/* Mode */}
         <BtnGroup>
-          <BtnGroupItem active={mode==='draw'} accent onClick={() => setMode('draw')} >
+          <BtnGroupItem active={mode==='draw'} color='var(--accent)' onClick={() => setMode('draw')}>
             {t.draw}
           </BtnGroupItem>
-          <BtnGroupItem active={mode==='move'} onClick={() => setMode('move')}>
+          <BtnGroupItem active={mode==='move'} color='var(--purple)' onClick={() => setMode('move')}>
             {t.move}
           </BtnGroupItem>
         </BtnGroup>
@@ -598,8 +608,8 @@ export default function Toolbar() {
 
         {/* Vue */}
         <BtnGroup>
-          <BtnGroupItem active={viewMode==='2d'} onClick={() => setViewMode('2d')}>2D</BtnGroupItem>
-          <BtnGroupItem active={viewMode==='3d'} onClick={() => setViewMode('3d')}>3D</BtnGroupItem>
+          <BtnGroupItem active={viewMode==='2d'} color='#f97316' onClick={() => setViewMode('2d')}>2D</BtnGroupItem>
+          <BtnGroupItem active={viewMode==='3d'} color='var(--purple)' onClick={() => setViewMode('3d')}>3D</BtnGroupItem>
         </BtnGroup>
 
         <TBtn active={showGrid} onClick={() => setShowGrid(!showGrid)} title={t.grid}>
@@ -612,6 +622,23 @@ export default function Toolbar() {
         <DropdownBtn label={t.save} items={[
           { label: t.saveLocal, action: () => saveToFile(robots, obstacles, { simMaxTime, simSpeed, gridColor, gridMinorStep, gridMajorStep, viewportColor, canvasBgColor }) },
           { label: t.saveGit,   action: handleGitSave },
+          { label: t.exportJson, action: () => {
+            const data = robots.map(r => ({
+              name: r.name, color: r.color,
+              startPosition: { x_mm: Math.round(r.x*1000), y_mm: Math.round(r.y*1000) },
+              startHeading_deg: r.heading, startDelay_s: r.startDelay,
+              speed_mm_s: Math.round(r.speed*1000), radius_mm: Math.round(r.radius*1000),
+              segments: computeSegments(r).map(s => ({
+                from: { x_mm: Math.round(s.from.x*1000), y_mm: Math.round(s.from.y*1000) },
+                to:   { x_mm: Math.round(s.to.x*1000),   y_mm: Math.round(s.to.y*1000) },
+                distance_mm: s.dist, heading_deg: s.angle, rotation_deg: s.relAngle,
+                start_time_s: s.startTime, duration_s: s.duration, pause_s: s.pause,
+              })),
+            }))
+            const a = document.createElement('a')
+            a.href = URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}))
+            a.download = 'pamis_trajectoires.json'; a.click()
+          }},
           { label: t.exportGazebo, action: () => {
             const sdf = generateGazeboSDF(robots, obstacles, simMaxTime)
             const a = document.createElement('a')

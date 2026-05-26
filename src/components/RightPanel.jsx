@@ -154,9 +154,10 @@ function StatPill({ label, value, color }) {
     <div style={{
       textAlign: 'center', padding: '9px 6px',
       background: 'var(--surface2)', borderRadius: 10,
+      border: '1px solid var(--border)',
     }}>
-      <div style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 500, marginBottom: 4, letterSpacing: '.01em' }}>{label}</div>
-      <div style={{ fontSize: 16, fontWeight: 700, color: color || 'var(--text)', letterSpacing: '-.02em' }}>{value}</div>
+      <div style={{ fontSize: 10, color: 'var(--text2)', fontWeight: 700, marginBottom: 4, letterSpacing: '.01em', textTransform: 'uppercase' }}>{label}</div>
+      <div style={{ fontSize: 16, fontWeight: 800, color: color || 'var(--text)', letterSpacing: '-.02em' }}>{value}</div>
     </div>
   )
 }
@@ -171,22 +172,22 @@ function SegRow({ seg, idx, robotColor, t, onRemove }) {
       margin: '0 0 8px',
       borderRadius: 10,
       background: 'var(--surface)',
-      border: '1px solid var(--border)',
-      borderLeft: `3px solid ${accent}`,
+      border: '2px solid var(--border)',
+      borderLeft: `4px solid ${accent}`,
       overflow: 'hidden',
     }}>
       {/* En-tête */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 8,
         padding: '7px 10px 6px',
-        borderBottom: '1px solid var(--border)',
+        borderBottom: '2px solid var(--border)',
       }}>
         <span style={{
-          fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20,
-          background: `${accent}18`, color: accent, letterSpacing: '.01em',
+          fontSize: 11, fontWeight: 800, padding: '2px 8px', borderRadius: 20,
+          background: `${accent}28`, color: accent, letterSpacing: '.01em',
         }}>#{idx + 1}</span>
-        <span style={{ flex: 1, fontSize: 11, color: 'var(--text3)', fontWeight: 400 }}>
-          départ à <span style={{ color: 'var(--text2)', fontWeight: 500 }}>{seg.startTime} s</span>
+        <span style={{ flex: 1, fontSize: 11, color: 'var(--text2)', fontWeight: 500 }}>
+          départ à <span style={{ color: 'var(--text)', fontWeight: 700 }}>{seg.startTime} s</span>
         </span>
         {seg.pause > 0 && (
           <span style={{
@@ -199,14 +200,14 @@ function SegRow({ seg, idx, robotColor, t, onRemove }) {
             onClick={onRemove}
             title="Supprimer ce waypoint"
             style={{
-              width: 22, height: 22, borderRadius: 6,
-              border: '1px solid var(--border)',
-              background: 'transparent', color: 'var(--text3)', fontSize: 14,
+              width: 22, height: 22, borderRadius: '50%',
+              border: '2px solid var(--red)',
+              background: 'transparent', color: 'var(--red)', fontSize: 14,
               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              flexShrink: 0, transition: 'all .12s',
+              flexShrink: 0, transition: 'all .12s', fontWeight: 700,
             }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--red)'; e.currentTarget.style.color = 'var(--red)' }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text3)' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--red)'; e.currentTarget.style.color = '#fff' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--red)' }}
           >×</button>
         )}
       </div>
@@ -222,16 +223,16 @@ function SegRow({ seg, idx, robotColor, t, onRemove }) {
           ...(seg.arrRotDuration > 0 ? [{ l: t.segArrRotation, v: seg.arrRotDuration + ' s' }] : []),
         ].map(({ l, v }) => (
           <div key={l} style={{ padding: '3px 0' }}>
-            <div style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 400, marginBottom: 2 }}>{l}</div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', letterSpacing: '-.01em' }}>{v}</div>
+            <div style={{ fontSize: 10, color: 'var(--text2)', fontWeight: 700, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '.04em' }}>{l}</div>
+            <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', letterSpacing: '-.01em' }}>{v}</div>
           </div>
         ))}
       </div>
 
       {/* Coordonnées */}
-      <div style={{ padding: '0 12px 7px', fontSize: 11, color: 'var(--text3)', fontWeight: 400 }}>
+      <div style={{ padding: '0 12px 7px', fontSize: 11, color: 'var(--text2)', fontWeight: 600 }}>
         ({Math.round(seg.from.x * 1000)}, {Math.round(seg.from.y * 1000)})
-        <span style={{ margin: '0 5px', opacity: .4 }}>→</span>
+        <span style={{ margin: '0 5px', opacity: .6 }}>→</span>
         ({Math.round(seg.to.x * 1000)}, {Math.round(seg.to.y * 1000)}) mm
       </div>
     </div>
@@ -462,12 +463,6 @@ export default function RightPanel() {
             color: 'var(--accent)', fontSize: 13, fontWeight: 700, cursor: 'pointer',
             transition: 'all .15s',
           }}>{t.exportJson}</button>
-          <button onClick={handleExportGazebo} style={{
-            width: '100%', padding: '10px 0', borderRadius: 'var(--r2)',
-            border: '1px solid var(--border)', background: 'var(--surface)',
-            color: 'var(--text2)', fontSize: 13, fontWeight: 600, cursor: 'pointer',
-            transition: 'all .15s',
-          }}>{t.exportGazebo}</button>
         </div>
       )}
 
