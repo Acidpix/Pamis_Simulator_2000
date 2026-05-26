@@ -2,6 +2,8 @@ import React, { useRef, useState, useCallback, useEffect } from 'react'
 import { useSimStore, pushHistory, clearAutosave } from '../store/simStore.js'
 import { useT } from '../i18n.js'
 
+const GIT_SERVER = 'http://localhost:3001'
+
 const mToMm = m => Math.round(m * 1000)
 const mmToM = mm => mm / 1000
 
@@ -364,6 +366,117 @@ function TabBar({ active, onChange, t }) {
   )
 }
 
+function OAuthSection({ t, g, setGitConfig }) {
+  const oauthToken    = useSimStore(s => s.oauthToken)
+  const setOAuthToken = useSimStore(s => s.setOAuthToken)
+  const clearToken    = useSimStore(s => s.clearOAuthToken)
+  const [status, setStatus] = useState('idle') // idle | connecting | error
+  const [errMsg, setErrMsg] = useState('')
+  const pollRef = useRef(null)
+
+  const stopPoll = () => { clearInterval(pollRef.current); pollRef.current = null }
+
+  useEffect(() => () => stopPoll(), [])
+
+  const connect = async () => {
+    if (!g.clientId || !g.clientSecret) { setErrMsg('Client ID et Client Secret requis.'); setStatus('error'); return }
+    setStatus('connecting'); setErrMsg('')
+    try {
+      const res  = await fetch(`${GIT_SERVER}/oauth/start`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId: g.clientId, clientSecret: g.clientSecret, provider: g.provider, gitlabUrl: g.gitlabUrl }),
+      })
+      const data = await res.json()
+      if (!data.ok) throw new Error(data.error)
+      window.open(data.authUrl, '_blank')
+      // Polling toutes les 2 s pendant 5 min max
+      let ticks = 0
+      pollRef.current = setInterval(async () => {
+        ticks++
+        if (ticks > 150) { stopPoll(); setStatus('error'); setErrMsg('Délai dépassé.'); return }
+        try {
+          const pr = await fetch(`${GIT_SERVER}/oauth/status`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ state: data.state }),
+          })
+          const pd = await pr.json()
+          if (!pd.done) return
+          stopPoll()
+          if (pd.ok && pd.token) { setOAuthToken(pd.token); setStatus('idle') }
+          else { setStatus('error'); setErrMsg(pd.error || 'Erreur inconnue') }
+        } catch { /* réseau, on réessaie */ }
+      }, 2000)
+    } catch (err) {
+      const msg = String(err).includes('fetch') ? t.gitOAuthErrServer : String(err).replace('Error: ', '')
+      setStatus('error'); setErrMsg(msg)
+    }
+  }
+
+  const disconnect = () => { stopPoll(); clearToken(); setStatus('idle'); setErrMsg('') }
+
+  const inputStyle = { width: '100%', marginBottom: 6, padding: '5px 8px', borderRadius: 'var(--r)', border: '1px solid var(--border)', background: 'var(--surface2)', fontSize: 12, color: 'var(--text)', boxSizing: 'border-box' }
+
+  return (
+    <div style={{ marginTop: 4 }}>
+      <Label>{t.gitProvider}</Label>
+      <div style={{ display: 'flex', gap: 3, background: 'var(--surface3)', borderRadius: 'var(--r)', padding: 3, marginBottom: 8 }}>
+        {[{ v:'github', label:'GitHub' }, { v:'gitlab', label:'GitLab' }].map(o => (
+          <button key={o.v} onClick={() => setGitConfig({ provider: o.v })} style={{
+            flex: 1, padding: '4px 0', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer',
+            border: 'none', transition: 'all .15s',
+            background: g.provider === o.v ? 'var(--surface)' : 'transparent',
+            color: g.provider === o.v ? 'var(--purple)' : 'var(--text3)',
+            boxShadow: g.provider === o.v ? 'var(--shadow-sm)' : 'none',
+          }}>{o.label}</button>
+        ))}
+      </div>
+
+      {g.provider === 'gitlab' && (
+        <>
+          <Label>{t.gitlabUrl}</Label>
+          <input value={g.gitlabUrl} onChange={e => setGitConfig({ gitlabUrl: e.target.value })} placeholder="https://gitlab.com" style={inputStyle} />
+        </>
+      )}
+
+      <Label>{t.gitClientId}</Label>
+      <input value={g.clientId} onChange={e => setGitConfig({ clientId: e.target.value })} placeholder="Oauth2 client_id" style={inputStyle} />
+
+      <Label>{t.gitClientSecret}</Label>
+      <input type="password" value={g.clientSecret} onChange={e => setGitConfig({ clientSecret: e.target.value })} placeholder="client_secret (non sauvegardé)" style={inputStyle} />
+
+      <p style={{ fontSize: 10, color: 'var(--text3)', lineHeight: 1.4, margin: '4px 0 10px' }}>
+        {t.gitOAuthHint}
+      </p>
+
+      {oauthToken ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ flex: 1, fontSize: 12, fontWeight: 700, color: 'var(--green)' }}>{t.gitConnected}</div>
+          <button onClick={disconnect} style={{ padding: '5px 10px', borderRadius: 'var(--r)', border: '1px solid var(--border)', background: 'transparent', color: 'var(--text3)', fontSize: 11, cursor: 'pointer' }}>
+            {t.gitDisconnectBtn}
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={connect}
+          disabled={status === 'connecting'}
+          style={{
+            width: '100%', padding: '8px 12px', borderRadius: 'var(--r)',
+            border: '1px solid var(--purple)', background: status === 'connecting' ? 'var(--surface3)' : 'var(--purple)',
+            color: status === 'connecting' ? 'var(--text3)' : '#fff',
+            fontSize: 13, fontWeight: 700, cursor: status === 'connecting' ? 'not-allowed' : 'pointer',
+          }}
+        >
+          {status === 'connecting' ? `⏳ ${t.gitConnecting}` : t.gitConnectBtn}
+        </button>
+      )}
+
+      {status === 'error' && errMsg && (
+        <div style={{ marginTop: 6, fontSize: 11, color: 'var(--red)' }}>✗ {errMsg}</div>
+      )}
+    </div>
+  )
+}
+
 function GitConfigCard({ t }) {
   const gitConfig      = useSimStore(s => s.gitConfig)
   const setGitConfig   = useSimStore(s => s.setGitConfig)
@@ -409,7 +522,7 @@ function GitConfigCard({ t }) {
 
         <Label>{t.gitAuthType}</Label>
         <div style={{ display: 'flex', gap: 3, background: 'var(--surface3)', borderRadius: 'var(--r)', padding: 3, marginBottom: 8 }}>
-          {[{ v:'token', label: t.gitAuthToken }, { v:'userpass', label: t.gitAuthUserpass }].map(o => (
+          {[{ v:'token', label: t.gitAuthToken }, { v:'userpass', label: t.gitAuthUserpass }, { v:'oauth', label: 'OAuth' }].map(o => (
             <button key={o.v} onClick={() => setGitConfig({ authType: o.v })} style={{
               flex: 1, padding: '4px 0', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer',
               border: 'none', transition: 'all .15s',
@@ -420,7 +533,9 @@ function GitConfigCard({ t }) {
           ))}
         </div>
 
-        {g.authType === 'token' ? (
+        {g.authType === 'oauth' ? (
+          <OAuthSection t={t} g={g} setGitConfig={setGitConfig} />
+        ) : g.authType === 'token' ? (
           <>
             <Label>{t.gitToken}</Label>
             <input
@@ -444,9 +559,11 @@ function GitConfigCard({ t }) {
           </>
         )}
 
-        <p style={{ fontSize: 10, color: 'var(--text3)', lineHeight: 1.4, margin: 0 }}>
-          {t.gitConfigHint}
-        </p>
+        {g.authType !== 'oauth' && (
+          <p style={{ fontSize: 10, color: 'var(--text3)', lineHeight: 1.4, margin: 0 }}>
+            {t.gitConfigHint}
+          </p>
+        )}
       </div>
     </div>
   )

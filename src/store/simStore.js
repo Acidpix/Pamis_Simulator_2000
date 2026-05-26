@@ -5,6 +5,38 @@ export const stlCache = new Map()
 export const AUTOSAVE_KEY = 'pamis_autosave'
 export const GIT_CONFIG_KEY = 'pamis_git_config'
 
+const OAUTH_TOKEN_KEY = 'pamis_oauth_token'
+
+// Obfuscation XOR + base64 (empêche la lecture directe dans localStorage)
+function obfuscateToken(plain) {
+  const key  = crypto.getRandomValues(new Uint8Array(plain.length))
+  const data = new Uint8Array([...plain].map((c, i) => c.charCodeAt(0) ^ key[i]))
+  return {
+    k: btoa(String.fromCharCode(...key)),
+    d: btoa(String.fromCharCode(...data)),
+  }
+}
+function deobfuscateToken(stored) {
+  try {
+    const key  = Uint8Array.from(atob(stored.k), c => c.charCodeAt(0))
+    const data = Uint8Array.from(atob(stored.d), c => c.charCodeAt(0))
+    return new TextDecoder().decode(data.map((b, i) => b ^ key[i]))
+  } catch { return '' }
+}
+export function saveOAuthToken(plain) {
+  try { localStorage.setItem(OAUTH_TOKEN_KEY, JSON.stringify(obfuscateToken(plain))) } catch {}
+}
+export function loadOAuthToken() {
+  try {
+    const raw = localStorage.getItem(OAUTH_TOKEN_KEY)
+    if (!raw) return ''
+    return deobfuscateToken(JSON.parse(raw))
+  } catch { return '' }
+}
+export function clearOAuthToken() {
+  try { localStorage.removeItem(OAUTH_TOKEN_KEY) } catch {}
+}
+
 function loadGitConfigFromStorage() {
   try {
     const raw = localStorage.getItem(GIT_CONFIG_KEY)
@@ -392,12 +424,24 @@ export const useSimStore = create(immer((set, get) => ({
   gitConfig: {
     repoUrl: '', filename: 'pamis_config.json', branch: 'main',
     authType: 'token', token: '', username: '', password: '',
+    provider: 'github', clientId: '', clientSecret: '', gitlabUrl: 'https://gitlab.com',
     ...loadGitConfigFromStorage(),
   },
+  oauthToken: loadOAuthToken(),  // en mémoire, déobfusqué au démarrage
   setGitConfig: patch => set(s => {
     Object.assign(s.gitConfig, patch)
-    try { localStorage.setItem(GIT_CONFIG_KEY, JSON.stringify(s.gitConfig)) } catch {}
+    // Ne pas persister clientSecret en localStorage
+    const { clientSecret: _cs, ...toSave } = s.gitConfig
+    try { localStorage.setItem(GIT_CONFIG_KEY, JSON.stringify(toSave)) } catch {}
   }),
+  setOAuthToken: plain => {
+    saveOAuthToken(plain)
+    set(s => { s.oauthToken = plain })
+  },
+  clearOAuthToken: () => {
+    clearOAuthToken()
+    set(s => { s.oauthToken = '' })
+  },
 
   openSettingsSignal: 0,
   triggerOpenSettings: () => set(s => { s.openSettingsSignal++ }),
