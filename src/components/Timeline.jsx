@@ -477,28 +477,8 @@ export default function Timeline() {
         minHeight: 60,
       }}>
 
-        {/* ── Gauche : temps + enregistrement ── */}
-        <div style={{ position: 'absolute', left: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 10,
-            padding: '4px 14px', borderRadius: 'var(--r2)',
-            background: 'var(--surface2)', border: '1px solid var(--border)',
-          }}>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 1 }}>Écoulé</div>
-              <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--accent)', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
-                {simTime.toFixed(1)}<span style={{ fontSize: 11, fontWeight: 600, marginLeft: 2, color: 'var(--text3)' }}>s</span>
-              </div>
-            </div>
-            <div style={{ width: 1, height: 28, background: 'var(--border)' }} />
-            <div style={{ textAlign: 'left' }}>
-              <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 1 }}>Restant</div>
-              <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--text2)', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
-                {remaining.toFixed(1)}<span style={{ fontSize: 11, fontWeight: 600, marginLeft: 2, color: 'var(--text3)' }}>s</span>
-              </div>
-            </div>
-          </div>
-          <div style={{ width: 1, height: 24, background: 'var(--border)', flexShrink: 0 }} />
+        {/* ── Gauche : enregistrement ── */}
+        <div style={{ position: 'absolute', left: 16 }}>
           <RecordBtn t={t} robots={robots} simMaxTime={simMaxTime} />
         </div>
 
@@ -535,8 +515,31 @@ export default function Timeline() {
           </button>
         </div>
 
-        {/* ── Droite : vitesse + durée ── */}
+        {/* ── Droite : timer + vitesse + durée ── */}
         <div style={{ position: 'absolute', right: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* Timer */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            padding: '4px 14px', borderRadius: 'var(--r2)',
+            background: 'var(--surface2)', border: '1px solid var(--border)',
+          }}>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 1 }}>Écoulé</div>
+              <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--accent)', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+                {simTime.toFixed(1)}<span style={{ fontSize: 11, fontWeight: 600, marginLeft: 2, color: 'var(--text3)' }}>s</span>
+              </div>
+            </div>
+            <div style={{ width: 1, height: 28, background: 'var(--border)' }} />
+            <div style={{ textAlign: 'left' }}>
+              <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 1 }}>Restant</div>
+              <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--text2)', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+                {remaining.toFixed(1)}<span style={{ fontSize: 11, fontWeight: 600, marginLeft: 2, color: 'var(--text3)' }}>s</span>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ width: 1, height: 24, background: 'var(--border)', flexShrink: 0 }} />
+
           {!hasRobots && (
             <input type="range" min={0} max={simMaxTime} step={0.05} value={simTime}
               onMouseDown={() => setSimPlaying(false)}
