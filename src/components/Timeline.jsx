@@ -471,58 +471,51 @@ export default function Timeline() {
 
       {/* ── Barre de transport ── */}
       <div style={{
-        position: 'relative',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '8px 16px', gap: 10,
-        minHeight: 60,
+        padding: '8px 16px', minHeight: 60,
       }}>
+        <div style={{
+          display: 'inline-flex', alignItems: 'center',
+          background: 'var(--surface2)', border: '1px solid var(--border)',
+          borderRadius: 'var(--r2)', overflow: 'hidden',
+          boxShadow: '0 2px 8px rgba(0,0,0,.06)',
+        }}>
 
-        {/* ── Gauche : enregistrement ── */}
-        <div style={{ position: 'absolute', left: 16 }}>
-          <RecordBtn t={t} robots={robots} simMaxTime={simMaxTime} />
-        </div>
+          {/* Enregistrement */}
+          <div style={{ padding: '0 12px', display: 'flex', alignItems: 'center' }}>
+            <RecordBtn t={t} robots={robots} simMaxTime={simMaxTime} />
+          </div>
 
-        {/* ── Centre : boutons transport ── */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          {/* Retour au début */}
-          <button onClick={() => { setSimPlaying(false); setSimTime(0) }} title={t.reset}
-            style={{ width: 34, height: 36, borderRadius: 'var(--r)', background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text3)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-            <ResetIcon />
-          </button>
+          <div style={{ width: 1, alignSelf: 'stretch', background: 'var(--border)' }} />
 
-          {/* Waypoint précédent */}
-          <button onClick={goToPrevWaypoint} title="Waypoint précédent"
-            style={{ width: 34, height: 36, borderRadius: 'var(--r)', background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text3)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-            <PrevWpIcon />
-          </button>
+          {/* Transport */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '0 10px' }}>
+            <button onClick={() => { setSimPlaying(false); setSimTime(0) }} title={t.reset}
+              style={{ width: 34, height: 36, borderRadius: 'var(--r)', background: 'transparent', border: 'none', color: 'var(--text3)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              <ResetIcon />
+            </button>
+            <button onClick={goToPrevWaypoint} title="Waypoint précédent"
+              style={{ width: 34, height: 36, borderRadius: 'var(--r)', background: 'transparent', border: 'none', color: 'var(--text3)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              <PrevWpIcon />
+            </button>
+            <button onClick={handlePlayPause} title={simPlaying ? t.pause : t.play}
+              style={{ width: 50, height: 36, borderRadius: 'var(--r)', background: simPlaying ? 'var(--accent)' : 'var(--green)', border: 'none', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, boxShadow: simPlaying ? '0 2px 10px var(--accent-mid)' : '0 2px 10px var(--green-dim)' }}>
+              {simPlaying ? <PauseIcon /> : <PlayIcon />}
+            </button>
+            <button onClick={goToNextWaypoint} title="Waypoint suivant"
+              style={{ width: 34, height: 36, borderRadius: 'var(--r)', background: 'transparent', border: 'none', color: 'var(--text3)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              <NextWpIcon />
+            </button>
+            <button onClick={() => { setSimPlaying(false); setSimTime(simMaxTime) }} title="Aller à la fin"
+              style={{ width: 34, height: 36, borderRadius: 'var(--r)', background: 'transparent', border: 'none', color: 'var(--text3)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+              <GoToEndIcon />
+            </button>
+          </div>
 
-          {/* Play / Pause */}
-          <button onClick={handlePlayPause} title={simPlaying ? t.pause : t.play}
-            style={{ width: 50, height: 36, borderRadius: 'var(--r)', background: simPlaying ? 'var(--accent)' : 'var(--green)', border: 'none', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, boxShadow: simPlaying ? '0 2px 10px var(--accent-mid)' : '0 2px 10px var(--green-dim)' }}>
-            {simPlaying ? <PauseIcon /> : <PlayIcon />}
-          </button>
+          <div style={{ width: 1, alignSelf: 'stretch', background: 'var(--border)' }} />
 
-          {/* Waypoint suivant */}
-          <button onClick={goToNextWaypoint} title="Waypoint suivant"
-            style={{ width: 34, height: 36, borderRadius: 'var(--r)', background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text3)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-            <NextWpIcon />
-          </button>
-
-          {/* Aller à la fin */}
-          <button onClick={() => { setSimPlaying(false); setSimTime(simMaxTime) }} title="Aller à la fin"
-            style={{ width: 34, height: 36, borderRadius: 'var(--r)', background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text3)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-            <GoToEndIcon />
-          </button>
-        </div>
-
-        {/* ── Droite : timer + vitesse + durée ── */}
-        <div style={{ position: 'absolute', right: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
           {/* Timer */}
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 10,
-            padding: '4px 14px', borderRadius: 'var(--r2)',
-            background: 'var(--surface2)', border: '1px solid var(--border)',
-          }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 14px' }}>
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 1 }}>Écoulé</div>
               <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--accent)', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
@@ -538,23 +531,28 @@ export default function Timeline() {
             </div>
           </div>
 
-          <div style={{ width: 1, height: 24, background: 'var(--border)', flexShrink: 0 }} />
+          <div style={{ width: 1, alignSelf: 'stretch', background: 'var(--border)' }} />
 
-          {!hasRobots && (
-            <input type="range" min={0} max={simMaxTime} step={0.05} value={simTime}
-              onMouseDown={() => setSimPlaying(false)}
-              onChange={e => { setSimPlaying(false); setSimTime(+e.target.value) }}
-              style={{ width: 120, cursor: 'pointer', accentColor: 'var(--accent)' }}
-            />
-          )}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+          {/* Vitesse */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '0 10px' }}>
             <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600 }}>×</span>
             <select value={simSpeed} onChange={e => setSimSpeed(+e.target.value)}
-              style={{ padding: '0 6px', height: 32, borderRadius: 'var(--r)', border: '1px solid var(--border)', background: 'var(--surface2)', fontSize: 13, fontWeight: 700, color: 'var(--text)', cursor: 'pointer' }}>
+              style={{ padding: '0 6px', height: 32, borderRadius: 'var(--r)', border: '1px solid var(--border)', background: 'var(--surface)', fontSize: 13, fontWeight: 700, color: 'var(--text)', cursor: 'pointer' }}>
               {[0.25, 0.5, 1, 2, 4].map(v => <option key={v} value={v}>{v}</option>)}
             </select>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, padding: '0 8px', borderRadius: 'var(--r)', border: '1px solid var(--border)', background: 'var(--surface2)', height: 32 }}>
+
+          <div style={{ width: 1, alignSelf: 'stretch', background: 'var(--border)' }} />
+
+          {/* Durée */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '0 10px' }}>
+            {!hasRobots && (
+              <input type="range" min={0} max={simMaxTime} step={0.05} value={simTime}
+                onMouseDown={() => setSimPlaying(false)}
+                onChange={e => { setSimPlaying(false); setSimTime(+e.target.value) }}
+                style={{ width: 100, cursor: 'pointer', accentColor: 'var(--accent)' }}
+              />
+            )}
             <span style={{ fontSize: 11, color: 'var(--text3)' }}>{t.duration}</span>
             <input type="number" min={5} max={120} step={5} value={simMaxTime}
               onChange={e => setSimMaxTime(+e.target.value)}
@@ -562,6 +560,7 @@ export default function Timeline() {
             />
             <span style={{ fontSize: 11, color: 'var(--text3)' }}>s</span>
           </div>
+
         </div>
       </div>
     </div>

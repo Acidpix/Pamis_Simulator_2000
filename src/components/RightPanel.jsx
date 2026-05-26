@@ -174,6 +174,7 @@ function SegRow({ seg, idx, robotColor, t, onRemove }) {
       background: 'var(--surface)',
       border: '2px solid var(--border)',
       borderLeft: `4px solid ${accent}`,
+      borderRadius: '8px 8px 0 0',
       overflow: 'hidden',
     }}>
       {/* En-tête */}
@@ -286,34 +287,45 @@ function RobotTrajectory({ robot, defaultOpen, onPauseChange, onActionPauseChang
             <div style={{ padding: 14, textAlign: 'center', color: 'var(--text3)', fontSize: 12 }}>{t.noWaypoints}</div>
           ) : (
             <div style={{ padding: '10px 12px 4px' }}>
-              {segments.map((seg, i) => (
-                <div key={i}>
-                  <SegRow seg={seg} idx={i} robotColor={robot.color} t={t}
-                    onRemove={onRemoveWaypoint ? () => onRemoveWaypoint(i) : null} />
-                  {(onPauseChange || onHeadingChange) && (
-                    <div style={{ margin: '-4px 0 10px', padding: '6px 12px', background: 'var(--surface2)', borderRadius: 8 }}>
-                      {onPauseChange && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ fontSize: 11, color: 'var(--text3)', flex: 1, fontWeight: 400 }}>{t.pauseOnArrival}</span>
-                          <PauseInput value={robot.waypoints[i]?.pause ?? 0} onChange={v => onPauseChange(i, v)} />
-                        </div>
-                      )}
-                      {onActionPauseChange && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                          <span style={{ fontSize: 11, color: '#9b72f5', flex: 1, fontWeight: 500 }}>💪 Action</span>
-                          <PauseInput value={robot.waypoints[i]?.actionPause ?? 0} onChange={v => onActionPauseChange(i, v)} />
-                        </div>
-                      )}
-                      {onHeadingChange && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                          <span style={{ fontSize: 11, color: 'var(--text3)', flex: 1, fontWeight: 400 }}>{t.arrivalHeading}</span>
-                          <HeadingInput value={robot.waypoints[i]?.heading ?? null} onChange={v => onHeadingChange(i, v)} />
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
+              {segments.map((seg, i) => {
+                const accent = wpAccent(i)
+                return (
+                  <div key={i} style={{ marginBottom: 10 }}>
+                    <SegRow seg={seg} idx={i} robotColor={robot.color} t={t}
+                      onRemove={onRemoveWaypoint ? () => onRemoveWaypoint(i) : null} />
+                    {(onPauseChange || onActionPauseChange || onHeadingChange) && (
+                      <div style={{
+                        padding: '8px 12px',
+                        background: 'var(--surface2)',
+                        border: `2px solid var(--border)`,
+                        borderTop: 'none',
+                        borderLeft: `4px solid ${accent}`,
+                        borderRadius: '0 0 8px 8px',
+                        display: 'flex', flexDirection: 'column', gap: 6,
+                      }}>
+                        {onPauseChange && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontSize: 11, color: 'var(--text)', flex: 1, fontWeight: 700 }}>⏸ {t.pauseOnArrival}</span>
+                            <PauseInput value={robot.waypoints[i]?.pause ?? 0} onChange={v => onPauseChange(i, v)} />
+                          </div>
+                        )}
+                        {onActionPauseChange && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontSize: 11, color: '#9b72f5', flex: 1, fontWeight: 700 }}>💪 Action</span>
+                            <PauseInput value={robot.waypoints[i]?.actionPause ?? 0} onChange={v => onActionPauseChange(i, v)} />
+                          </div>
+                        )}
+                        {onHeadingChange && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontSize: 11, color: 'var(--text)', flex: 1, fontWeight: 700 }}>🧭 {t.arrivalHeading}</span>
+                            <HeadingInput value={robot.waypoints[i]?.heading ?? null} onChange={v => onHeadingChange(i, v)} />
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           )}
         </>
