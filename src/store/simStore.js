@@ -408,6 +408,8 @@ export const useSimStore = create(immer((set, get) => ({
     const prev = JSON.parse(undoStack.pop())
     s.robots=prev.robots; s.obstacles=prev.obstacles
     s.collisions=[]; s.obsCollisions=[]; s.borderCollisions=[]
+    if (!s.robots.find(r=>r.id===s.selectedRobotId)) s.selectedRobotId=s.robots[0]?.id??null
+    if (!s.obstacles.find(o=>o.id===s.selectedObsId)) s.selectedObsId=null
   }),
   redo: () => set(s => {
     if (!redoStack.length) return
@@ -415,6 +417,8 @@ export const useSimStore = create(immer((set, get) => ({
     const next = JSON.parse(redoStack.pop())
     s.robots=next.robots; s.obstacles=next.obstacles
     s.collisions=[]; s.obsCollisions=[]; s.borderCollisions=[]
+    if (!s.robots.find(r=>r.id===s.selectedRobotId)) s.selectedRobotId=s.robots[0]?.id??null
+    if (!s.obstacles.find(o=>o.id===s.selectedObsId)) s.selectedObsId=null
   }),
 
   loadState: (savedRobots, savedObs=[], meta={}) => set(s => {
