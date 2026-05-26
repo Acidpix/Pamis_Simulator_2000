@@ -3,7 +3,7 @@ import { useSimStore, pushHistory, computeSegments } from '../store/simStore.js'
 import { useT } from '../i18n.js'
 import { importGazeboSDF } from '../utils/importGazeboSDF.js'
 
-const GIT_SERVER = `${window.location.protocol}//${window.location.hostname}:3001`
+const GIT_SERVER = window.location.origin
 
 function buildPayload(robots, obstacles, meta) {
   return JSON.stringify({
