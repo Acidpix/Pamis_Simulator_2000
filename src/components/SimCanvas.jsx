@@ -4,7 +4,8 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { OrthographicCamera, PerspectiveCamera, OrbitControls, Line, Html, Text, useTexture, Billboard } from '@react-three/drei'
 import * as THREE from 'three'
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
-import { useSimStore, getRobotPose, stlCache, obsStlCache, pushHistory } from '../store/simStore.js'
+import { useSimStore, getRobotPose, getBranchPolys, getPursuitTracks, stlCache, obsStlCache, pushHistory } from '../store/simStore.js'
+import { Icon, ICON_PATHS, WP_TYPE_COLOR } from './Icons.jsx'
 
 function BgColorSetter({ color }) {
   const { gl } = useThree()
@@ -14,12 +15,11 @@ function BgColorSetter({ color }) {
 
 const DEG = Math.PI / 180
 
-// In-canvas labels rendered via a 2D canvas texture so they (a) get recorded
-// by canvas.captureStream, and (b) display color-emoji glyphs via the system
-// emoji font (Apple/Segoe/Noto). troika-three-text doesn't render color emoji.
-const EMOJI_FONT_STACK = '-apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif'
+// In-canvas labels rendered via a 2D canvas texture so they get recorded by
+// canvas.captureStream. Icons are drawn from the same SVG paths as the UI (Icons.jsx).
+const FONT_STACK = '-apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
 const chipTextureCache = new Map()
-const emojiTextureCache = new Map()
+const iconTextureCache = new Map()
 
 function drawRoundedRect(ctx, x, y, w, h, r) {
   const rr = Math.min(r, w/2, h/2)
@@ -36,17 +36,43 @@ function drawRoundedRect(ctx, x, y, w, h, r) {
   ctx.closePath()
 }
 
-function makeChipTexture({ text, bg, color, fontPx, bold }) {
-  const key = `${text}|${bg}|${color}|${fontPx}|${bold?1:0}`
+// Trace un picto (viewBox 24) dans le carré [x, y, size, size]
+function drawIcon(ctx, name, x, y, size, color) {
+  const paths = ICON_PATHS[name]
+  if (!paths) return
+  ctx.save()
+  ctx.translate(x, y)
+  ctx.scale(size / 24, size / 24)
+  ctx.strokeStyle = color
+  ctx.lineWidth = 2.4
+  ctx.lineCap = 'round'
+  ctx.lineJoin = 'round'
+  for (const d of paths) ctx.stroke(new Path2D(d))
+  ctx.restore()
+}
+
+function toTexture(canvas) {
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.minFilter = THREE.LinearFilter
+  texture.magFilter = THREE.LinearFilter
+  texture.anisotropy = 4
+  texture.needsUpdate = true
+  return texture
+}
+
+function makeChipTexture({ text, icon, bg, color, fontPx, bold }) {
+  const key = `${text}|${icon||''}|${bg}|${color}|${fontPx}|${bold?1:0}`
   let entry = chipTextureCache.get(key)
   if (entry) return entry
   const dpr = Math.min(2, window.devicePixelRatio || 1)
   const measure = document.createElement('canvas').getContext('2d')
-  const font = `${bold?'bold ':''}${fontPx}px ${EMOJI_FONT_STACK}`
+  const font = `${bold?'bold ':''}${fontPx}px ${FONT_STACK}`
   measure.font = font
   const padX = fontPx * 0.55, padY = fontPx * 0.32
-  const textW = measure.measureText(text).width
-  const w = Math.ceil(textW + padX * 2)
+  const iconW = icon ? fontPx * 1.05 : 0
+  const gap = icon && text ? fontPx * 0.25 : 0
+  const textW = text ? measure.measureText(text).width : 0
+  const w = Math.ceil(iconW + gap + textW + padX * 2)
   const h = Math.ceil(fontPx * 1.25 + padY * 2)
   const canvas = document.createElement('canvas')
   canvas.width = w * dpr
@@ -54,52 +80,42 @@ function makeChipTexture({ text, bg, color, fontPx, bold }) {
   const ctx = canvas.getContext('2d')
   ctx.scale(dpr, dpr)
   ctx.font = font
-  ctx.textAlign = 'center'
+  ctx.textAlign = 'left'
   ctx.textBaseline = 'middle'
   ctx.fillStyle = bg
   drawRoundedRect(ctx, 0, 0, w, h, Math.min(h * 0.35, 8))
   ctx.fill()
+  if (icon) drawIcon(ctx, icon, padX, (h - iconW) / 2, iconW, color)
   ctx.fillStyle = color
-  ctx.fillText(text, w/2, h/2)
-  const texture = new THREE.CanvasTexture(canvas)
-  texture.minFilter = THREE.LinearFilter
-  texture.magFilter = THREE.LinearFilter
-  texture.anisotropy = 4
-  texture.needsUpdate = true
-  entry = { texture, w, h }
+  if (text) ctx.fillText(text, padX + iconW + gap, h / 2 + fontPx * 0.04)
+  entry = { texture: toTexture(canvas), w, h }
   chipTextureCache.set(key, entry)
   return entry
 }
 
-function makeEmojiTexture(emoji, fontPx = 96) {
-  const key = `${emoji}|${fontPx}`
-  let entry = emojiTextureCache.get(key)
+// Pastille ronde avec un picto (ex. robot en phase « action »)
+function makeIconBadgeTexture(name, bg, color, px = 96) {
+  const key = `${name}|${bg}|${color}|${px}`
+  let entry = iconTextureCache.get(key)
   if (entry) return entry
   const dpr = Math.min(2, window.devicePixelRatio || 1)
-  const size = Math.ceil(fontPx * 1.2)
   const canvas = document.createElement('canvas')
-  canvas.width = canvas.height = size * dpr
+  canvas.width = canvas.height = px * dpr
   const ctx = canvas.getContext('2d')
   ctx.scale(dpr, dpr)
-  ctx.font = `${fontPx}px ${EMOJI_FONT_STACK}`
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.fillText(emoji, size/2, size/2)
-  const texture = new THREE.CanvasTexture(canvas)
-  texture.minFilter = THREE.LinearFilter
-  texture.magFilter = THREE.LinearFilter
-  texture.anisotropy = 4
-  texture.needsUpdate = true
-  entry = { texture, size }
-  emojiTextureCache.set(key, entry)
+  ctx.fillStyle = bg
+  ctx.beginPath(); ctx.arc(px / 2, px / 2, px / 2 - 2, 0, Math.PI * 2); ctx.fill()
+  drawIcon(ctx, name, px * 0.22, px * 0.22, px * 0.56, color)
+  entry = { texture: toTexture(canvas), size: px }
+  iconTextureCache.set(key, entry)
   return entry
 }
 
-function Chip({ position, text, bg, fontSize = 0.04, color = '#fff', bold = true }) {
+function Chip({ position, text = '', icon, bg, fontSize = 0.04, color = '#fff', bold = true }) {
   const fontPx = 36
   const { texture, w, h } = useMemo(
-    () => makeChipTexture({ text: String(text), bg, color, fontPx, bold }),
-    [text, bg, color, bold]
+    () => makeChipTexture({ text: String(text), icon, bg, color, fontPx, bold }),
+    [text, icon, bg, color, bold]
   )
   const targetH = fontSize * 1.9
   const scale = targetH / h
@@ -115,7 +131,7 @@ function Chip({ position, text, bg, fontSize = 0.04, color = '#fff', bold = true
 function ActionLabel({ position }) {
   const ref = useRef()
   const startRef = useRef(null)
-  const { texture } = useMemo(() => makeEmojiTexture('💪', 96), [])
+  const { texture } = useMemo(() => makeIconBadgeTexture('action', '#7048e8', '#ffffff'), [])
   useFrame(({ clock }) => {
     if (startRef.current === null) startRef.current = clock.elapsedTime
     const t = clock.elapsedTime - startRef.current
@@ -262,61 +278,119 @@ function useObsStlGeo(obsId, hasStl, width) {
 }
 
 // ── Trajectoire ──
-function TrajectoryLine({ robot, selected, simTime, onWaypointClick, onWaypointDown, onSegmentClick }) {
-  const pts = useMemo(() => {
-    const arr=[new THREE.Vector3(robot.x-1.5,robot.y-1.0,0.006)]
-    for (const wp of robot.waypoints) arr.push(new THREE.Vector3(wp.x-1.5,wp.y-1.0,0.006))
-    return arr
-  }, [robot])
+const toV = p => [p.x - 1.5, p.y - 1.0]
 
-  if (pts.length<2) return null
+// Point + cap à la fraction f (0..1) de la longueur d'une polyligne
+function polyAtFraction(poly, f) {
+  let total = 0
+  const lens = []
+  for (let i = 0; i < poly.length - 1; i++) { const l = Math.hypot(poly[i+1].x - poly[i].x, poly[i+1].y - poly[i].y); lens.push(l); total += l }
+  let target = total * f, i = 0
+  while (i < lens.length - 1 && target > lens[i]) { target -= lens[i]; i++ }
+  const a = poly[i], b = poly[i + 1], u = lens[i] > 0 ? Math.min(1, target / lens[i]) : 0
+  return { x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u, ang: Math.atan2(b.y - a.y, b.x - a.x) }
+}
+
+function HandleSquare({ p, onDown }) {
+  return (
+    <mesh position={[p.x - 1.5, p.y - 1.0, 0.034]} onPointerDown={e => { e.stopPropagation(); onDown() }}>
+      <planeGeometry args={[0.05, 0.05]} />
+      <meshBasicMaterial color={WP_TYPE_COLOR.bezier} />
+    </mesh>
+  )
+}
+
+function TrajectoryLine({ robot, selected, simTime, onWaypointClick, onWaypointDown, onSegmentClick, onCtrlDown }) {
+  const branches = useMemo(() => getBranchPolys(robot), [robot])
+  const tracks = useMemo(() => getPursuitTracks(robot), [robot])
+  const fullLine = useMemo(() => {
+    const out = [[robot.x - 1.5, robot.y - 1.0, 0.006]]
+    for (const poly of branches) for (let k = 1; k < poly.length; k++) out.push([poly[k].x - 1.5, poly[k].y - 1.0, 0.006])
+    return out
+  }, [robot, branches])
+
+  if (branches.length === 0) return null
   return (
     <group>
-      <Line points={pts.map(p=>[p.x,p.y,p.z])} color={robot.color}
+      <Line points={fullLine} color={robot.color}
         lineWidth={selected?3:1.8} transparent opacity={selected?1:.55} />
-      {/* Zones cliquables sur les segments pour insérer un waypoint */}
-      {pts.slice(0,-1).map((p,i) => {
-        const np=pts[i+1]
-        const mid=new THREE.Vector3().lerpVectors(p,np,0.5)
-        const dist=p.distanceTo(np)
-        const angle=Math.atan2(np.y-p.y,np.x-p.x)
+      {/* Trace réellement suivie en pure pursuit (écart avec la spline de référence) */}
+      {tracks.map((tr, i) => (
+        <Line key={`pp${i}`} points={tr.map(p => [p.x - 1.5, p.y - 1.0, 0.008])} color="#ffffff"
+          lineWidth={1.5} dashed dashSize={0.02} gapSize={0.015} transparent opacity={selected?.9:.5} />
+      ))}
+      {/* Zones cliquables le long des branches pour insérer un waypoint */}
+      {branches.map((poly, i) => poly.slice(0, -1).map((p, k) => {
+        const np = poly[k + 1]
+        const dist = Math.hypot(np.x - p.x, np.y - p.y)
+        if (dist < 1e-6) return null
+        const angle = Math.atan2(np.y - p.y, np.x - p.x)
         return (
-          <mesh key={`seg${i}`} position={[mid.x,mid.y,0.020]} rotation={[0,0,angle]}
+          <mesh key={`seg${i}_${k}`} position={[(p.x + np.x) / 2 - 1.5, (p.y + np.y) / 2 - 1.0, 0.020]} rotation={[0,0,angle]}
             onClick={e=>{e.stopPropagation();onSegmentClick?.(i,e.point.x+1.5,e.point.y+1.0)}}>
             <planeGeometry args={[dist,0.07]} />
             <meshBasicMaterial transparent opacity={0} />
           </mesh>
         )
+      }))}
+      {/* Poignées de Bézier (robot sélectionné) */}
+      {selected && robot.waypoints.map((wp, i) => {
+        if (wp.type !== 'bezier' || !wp.c1 || !wp.c2) return null
+        const prev = i === 0 ? robot : robot.waypoints[i - 1]
+        const z = 0.033
+        return (
+          <group key={`h${wp.id ?? i}`}>
+            <Line points={[[prev.x - 1.5, prev.y - 1.0, z], [wp.c1.x - 1.5, wp.c1.y - 1.0, z]]} color={WP_TYPE_COLOR.bezier} lineWidth={1} transparent opacity={.7} />
+            <Line points={[[wp.x - 1.5, wp.y - 1.0, z], [wp.c2.x - 1.5, wp.c2.y - 1.0, z]]} color={WP_TYPE_COLOR.bezier} lineWidth={1} transparent opacity={.7} />
+            <HandleSquare p={wp.c1} onDown={() => onCtrlDown?.(i, 'c1')} />
+            <HandleSquare p={wp.c2} onDown={() => onCtrlDown?.(i, 'c2')} />
+          </group>
+        )
       })}
       {robot.waypoints.map((wp,i) => {
-        const hasPause = (wp.pause??0)>0
-        const hasAction = (wp.actionPause??0)>0
+        const type = wp.type ?? 'point'
+        const hasPause = type !== 'pass' && (wp.pause??0)>0
+        const hasAction = type !== 'pass' && (wp.actionPause??0)>0
+        const [wx, wy] = toV(wp)
+        const rev = !!wp.reverse && type !== 'pass'
         return (
-          <group key={i}>
-            <mesh position={[wp.x-1.5,wp.y-1.0,0.030]}
+          <group key={wp.id ?? i}>
+            {/* Forme selon le type : disque = point, losange = Bézier, anneau = passage */}
+            <mesh position={[wx,wy,0.030]}
+              rotation={[0,0,type==='bezier'?Math.PI/4:0]}
               onClick={e=>{e.stopPropagation();onWaypointClick?.(i)}}
               onPointerDown={e=>{e.stopPropagation();onWaypointDown?.(i)}}>
-              <circleGeometry args={[0.055,16]} />
-              <meshBasicMaterial color={robot.color} transparent opacity={.9} />
+              <circleGeometry args={[type==='bezier'?0.068:0.055, type==='bezier'?4:16]} />
+              <meshBasicMaterial color={robot.color} transparent opacity={type==='pass'?.35:.9} />
             </mesh>
+            {type==='pass' && (
+              <mesh position={[wx,wy,0.031]}>
+                <ringGeometry args={[0.045,0.058,24]} />
+                <meshBasicMaterial color={robot.color} />
+              </mesh>
+            )}
             <Chip
-              position={[wp.x-1.5, wp.y-1.0+0.075, 0.031]}
+              position={[wx, wy, 0.032]}
               text={`${i+1}`}
-              bg={robot.color}
-              fontSize={0.032}
+              icon={rev ? 'reverse' : undefined}
+              bg={rev ? '#f97316' : robot.color}
+              color="#fff"
+              fontSize={0.022}
             />
             {hasPause && (
               <Chip
-                position={[wp.x-1.5, wp.y-1.0-(hasAction?0.115:0.09), 0.031]}
-                text={`⏱ ${wp.pause}s`}
+                position={[wx, wy-(hasAction?0.115:0.09), 0.031]}
+                icon="timer"
+                text={`${wp.pause}s`}
                 bg="#f08c00"
                 fontSize={0.035}
               />
             )}
             {hasAction && (
               <Chip
-                position={[wp.x-1.5, wp.y-1.0-(hasPause?0.165:0.09), 0.031]}
-                text={`💪 ${wp.actionPause}s`}
+                position={[wx, wy-(hasPause?0.165:0.09), 0.031]}
+                icon="action"
+                text={`${wp.actionPause}s`}
                 bg="#7048e8"
                 fontSize={0.035}
               />
@@ -324,10 +398,11 @@ function TrajectoryLine({ robot, selected, simTime, onWaypointClick, onWaypointD
           </group>
         )
       })}
-      {pts.slice(0,-1).map((p,i) => {
-        const np=pts[i+1], mid=new THREE.Vector3().lerpVectors(p,np,0.55)
+      {/* Flèches de direction au milieu de chaque branche (suivent la courbe) */}
+      {branches.map((poly,i) => {
+        const m = polyAtFraction(poly, 0.55)
         return (
-          <mesh key={`a${i}`} position={[mid.x,mid.y,0.013]} rotation={[0,0,Math.atan2(np.y-p.y,np.x-p.x)-Math.PI/2]}>
+          <mesh key={`a${i}`} position={[m.x-1.5,m.y-1.0,0.013]} rotation={[0,0,m.ang-Math.PI/2]}>
             <coneGeometry args={[0.025,0.055,3]} />
             <meshBasicMaterial color={robot.color} />
           </mesh>
@@ -503,7 +578,7 @@ function Scene(props) {
     showGrid, gridColor, gridMinorStep, gridMajorStep, bgImage, viewportColor, canvasBgColor,
     tableW, tableH, mode, viewMode,
     selectRobot, selectObstacle, setRobotPosition, setObstaclePosition,
-    removeWaypoint, moveWaypoint, updateWaypointPause, insertWaypoint, onTableClick } = props
+    removeWaypoint, moveWaypoint, moveWaypointCtrl, updateWaypointPause, insertWaypoint, wpType, onTableClick } = props
 
   const { camera, gl } = useThree()
   const dragTarget = useRef(null)
@@ -563,7 +638,8 @@ function Scene(props) {
       const {x,y} = snapWaypoint(tx,ty,dt.id,dt.idx)
       moveWaypoint(dt.id,dt.idx,x,y)
     }
-  }, [getWorldPos,setRobotPosition,setObstaclePosition,moveWaypoint,snapWaypoint,tableW,tableH])
+    else if (dt.type==='ctrl') moveWaypointCtrl(dt.id,dt.idx,dt.which,tx,ty)
+  }, [getWorldPos,setRobotPosition,setObstaclePosition,moveWaypoint,moveWaypointCtrl,snapWaypoint,tableW,tableH])
 
   const onMeshClick = useCallback(e => {
     if (mode!=='draw'||is3d) return
@@ -620,7 +696,8 @@ function Scene(props) {
         <TrajectoryLine key={`t_${r.id}`} robot={r} selected={r.id===selectedRobotId} simTime={simTime}
           onWaypointClick={idx=>{ if(mode==='draw'){pushHistory({robots,obstacles});removeWaypoint(r.id,idx)} }}
           onWaypointDown={idx=>{ if(mode==='move'){pushHistory({robots,obstacles});dragTarget.current={type:'wp',id:r.id,idx}} }}
-          onSegmentClick={(segIdx,wx,wy)=>{ if(mode==='draw'){pushHistory({robots,obstacles});insertWaypoint(r.id,segIdx,clamp(wx,tableW),clamp(wy,tableH))} }} />
+          onCtrlDown={(idx,which)=>{ if(mode==='move'){pushHistory({robots,obstacles});dragTarget.current={type:'ctrl',id:r.id,idx,which}} }}
+          onSegmentClick={(segIdx,wx,wy)=>{ if(mode==='draw'){pushHistory({robots,obstacles});insertWaypoint(r.id,segIdx,clamp(wx,tableW),clamp(wy,tableH),wpType)} }} />
       ))}
 
       {collisions.map((c,i)    => <CollisionMarker key={`rr${i}`} cx={c.x} cy={c.y} color="#dc2626" />)}
@@ -636,12 +713,14 @@ const getShortcuts = t => [
     { keys: [t.scClickSeg],     desc: t.scClickSegDesc },
     { keys: [t.scClickWp],      desc: t.scClickWpDesc },
     { keys: [t.scDrag],         desc: t.scDragDesc },
+    { keys: [t.scDragCtrl],     desc: t.scDragCtrlDesc },
     { keys: ['Ctrl', t.scDrag], desc: t.scCtrlDragDesc },
     { keys: [t.scWheel],        desc: t.scWheelDesc },
     { keys: [t.scMidClick],     desc: t.scMidClickDesc },
   ]},
   { group: t.scGroup2, items: [
     { keys: ['Q'], desc: t.scQDesc },
+    { keys: ['1', '2', '3'], desc: t.scKeyTypes },
     { keys: [t.scSpace], desc: t.scSpaceDesc },
   ]},
 ]
@@ -715,7 +794,7 @@ function ShortcutsOverlay() {
           boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
           transition: 'all .15s',
         }}
-      >⌨</button>
+      ><Icon name="keyboard" size={17} /></button>
     </div>
   )
 }
@@ -724,8 +803,11 @@ const MODE_COLORS = { draw: '#6366f1', move: '#2f9e44' }
 
 function ModeIndicator({ mode }) {
   const t = useT()
+  const wpType = useSimStore(s => s.wpType)
   const color = MODE_COLORS[mode] || '#6366f1'
-  const label = mode === 'draw' ? `✏ ${t.draw}` : `✋ ${t.move}`
+  const label = mode === 'draw'
+    ? `${t.addWaypoint} · ${t[{ point: 'wpTypePoint', bezier: 'wpTypeBezier', pass: 'wpTypePass' }[wpType]]}`
+    : t.moveWaypoint
   return (
     <div style={{
       position: 'absolute', top: 12, right: 12, zIndex: 10,
@@ -737,7 +819,8 @@ function ModeIndicator({ mode }) {
       pointerEvents: 'none',
       backdropFilter: 'blur(6px)',
       boxShadow: `0 2px 10px ${color}33`,
-    }}>{label}</div>
+      display: 'flex', alignItems: 'center', gap: 6,
+    }}><Icon name={mode === 'draw' ? 'pencil' : 'move'} size={14} />{label}</div>
   )
 }
 
@@ -765,8 +848,9 @@ export default function SimCanvas({ onTableClick }) {
           selectRobot={s.selectRobot} selectObstacle={s.selectObstacle}
           setRobotPosition={s.setRobotPosition} setObstaclePosition={s.setObstaclePosition}
           removeWaypoint={s.removeWaypoint} moveWaypoint={s.moveWaypoint}
+          moveWaypointCtrl={s.moveWaypointCtrl}
           updateWaypointPause={s.updateWaypointPause}
-          insertWaypoint={s.insertWaypoint}
+          insertWaypoint={s.insertWaypoint} wpType={s.wpType}
           onTableClick={onTableClick}
         />
       </Canvas>

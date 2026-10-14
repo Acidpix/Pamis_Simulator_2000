@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useMemo, useCallback, useState } from 'react'
 import { useSimStore, computeSegments, detectCollisions, detectObstacleCollisions, detectBorderCollisions } from '../store/simStore.js'
 import { useT } from '../i18n.js'
+import { Icon } from './Icons.jsx'
 
 // ── Helpers enregistrement ───────────────────────────────────────────────────
 function pickRecordingMime() {
@@ -145,8 +146,8 @@ function RecordBtn({ t, robots, simMaxTime }) {
           borderRadius: 10, boxShadow: '0 -8px 32px rgba(220,38,38,.15)',
           padding: '16px', width: 230, zIndex: 1000,
         }}>
-          <div style={{ fontSize: 13, fontWeight: 800, color: '#dc2626', marginBottom: 12 }}>
-            ⏺ {t.recSettings}
+          <div style={{ fontSize: 13, fontWeight: 800, color: '#dc2626', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Icon name="record" size={14} /> {t.recSettings}
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -239,7 +240,7 @@ function RecordBtn({ t, robots, simMaxTime }) {
   )
 }
 
-const TRACK_H = 20
+const TRACK_H = 24
 const LABEL_W = 80
 
 function PlayIcon() {
@@ -404,9 +405,34 @@ export default function Timeline() {
       userSelect: 'none',
     }}>
 
-      {/* ── Pistes robot ── */}
-      {hasRobots && (
-        <div style={{ padding: '18px 16px 0', maxHeight: 5 * (TRACK_H + 4) + 28, overflowY: 'auto', overflowX: 'visible' }}>
+      {/* ── Règle + pistes robot ── */}
+      <div style={{ padding: '10px 16px 0', maxHeight: 5 * (TRACK_H + 4) + 70, overflowY: 'auto', overflowX: 'visible' }}>
+        {/* Règle de défilement : grosse poignée à glisser */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, height: 30, position: 'sticky', top: 0, zIndex: 5, background: 'var(--surface)', marginBottom: hasRobots ? 20 : 8 }}>
+          <div style={{ width: LABEL_W, flexShrink: 0 }} />
+          <div
+            ref={trackAreaRef}
+            onMouseDown={handleTrackMouseDown}
+            style={{ flex: 1, position: 'relative', height: 22, borderRadius: 8, background: 'var(--surface3)', cursor: 'pointer' }}
+          >
+            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${pct}%`, background: 'var(--accent-dim)', borderRadius: 8, pointerEvents: 'none' }} />
+            <div style={{
+              position: 'absolute', left: `${pct}%`, top: -4, bottom: -4, width: 20,
+              transform: 'translateX(-50%)', borderRadius: 7, background: 'var(--accent)',
+              boxShadow: '0 2px 10px var(--accent-mid)', cursor: 'grab', pointerEvents: 'none',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2,
+            }}>
+              <span style={{ width: 2, height: 12, borderRadius: 1, background: 'rgba(255,255,255,.85)' }} />
+              <span style={{ width: 2, height: 12, borderRadius: 1, background: 'rgba(255,255,255,.85)' }} />
+            </div>
+            <span className="tabular" style={{
+              position: 'absolute', top: 0, bottom: 0, display: 'flex', alignItems: 'center',
+              ...(pct > 85 ? { right: `calc(${100 - pct}% + 16px)` } : { left: `calc(${pct}% + 16px)` }),
+              fontSize: 12, fontWeight: 800, color: 'var(--accent)', pointerEvents: 'none', whiteSpace: 'nowrap',
+            }}>{simTime.toFixed(1)} s</span>
+          </div>
+        </div>
+        {hasRobots && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {robotTimelines.map(rt => {
               const startPct = simMaxTime > 0 ? (rt.start / simMaxTime) * 100 : 0
@@ -418,7 +444,6 @@ export default function Timeline() {
                     <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{rt.name}</span>
                   </div>
                   <div
-                    ref={trackAreaRef}
                     onMouseDown={handleTrackMouseDown}
                     style={{ flex: 1, position: 'relative', height: TRACK_H, cursor: 'pointer' }}
                   >
@@ -451,14 +476,14 @@ export default function Timeline() {
                       )
                     })}
                     <div style={{
-                      position: 'absolute', top: -2, bottom: -2, left: `${pct}%`, width: 2,
+                      position: 'absolute', top: -2, bottom: -2, left: `${pct}%`, width: 3,
                       background: 'var(--accent)', borderRadius: 2, zIndex: 3,
                       transform: 'translateX(-50%)', boxShadow: '0 0 6px var(--accent)',
                       pointerEvents: 'none',
                     }}>
                       <div style={{
-                        position: 'absolute', top: -3, left: '50%', transform: 'translateX(-50%)',
-                        width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)',
+                        position: 'absolute', top: -5, left: '50%', transform: 'translateX(-50%)',
+                        width: 11, height: 11, borderRadius: '50%', background: 'var(--accent)',
                       }} />
                     </div>
                   </div>
@@ -466,8 +491,8 @@ export default function Timeline() {
               )
             })}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* ── Barre de transport ── */}
       <div style={{
@@ -494,7 +519,7 @@ export default function Timeline() {
               style={{ width: 34, height: 36, borderRadius: 'var(--r)', background: 'transparent', border: 'none', color: 'var(--text3)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
               <ResetIcon />
             </button>
-            <button onClick={goToPrevWaypoint} title="Waypoint précédent"
+            <button onClick={goToPrevWaypoint} title={t.prevWp}
               style={{ width: 34, height: 36, borderRadius: 'var(--r)', background: 'transparent', border: 'none', color: 'var(--text3)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
               <PrevWpIcon />
             </button>
@@ -502,11 +527,11 @@ export default function Timeline() {
               style={{ width: 50, height: 36, borderRadius: 'var(--r)', background: simPlaying ? 'var(--accent)' : 'var(--green)', border: 'none', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, boxShadow: simPlaying ? '0 2px 10px var(--accent-mid)' : '0 2px 10px var(--green-dim)' }}>
               {simPlaying ? <PauseIcon /> : <PlayIcon />}
             </button>
-            <button onClick={goToNextWaypoint} title="Waypoint suivant"
+            <button onClick={goToNextWaypoint} title={t.nextWp}
               style={{ width: 34, height: 36, borderRadius: 'var(--r)', background: 'transparent', border: 'none', color: 'var(--text3)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
               <NextWpIcon />
             </button>
-            <button onClick={() => { setSimPlaying(false); setSimTime(simMaxTime) }} title="Aller à la fin"
+            <button onClick={() => { setSimPlaying(false); setSimTime(simMaxTime) }} title={t.goToEnd}
               style={{ width: 34, height: 36, borderRadius: 'var(--r)', background: 'transparent', border: 'none', color: 'var(--text3)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
               <GoToEndIcon />
             </button>
@@ -517,14 +542,14 @@ export default function Timeline() {
           {/* Timer */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 14px' }}>
             <div style={{ textAlign: 'right', minWidth: 64 }}>
-              <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 1 }}>Écoulé</div>
+              <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 1 }}>{t.elapsed}</div>
               <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--accent)', lineHeight: 1, fontVariantNumeric: 'tabular-nums', fontFamily: 'monospace' }}>
                 {simTime.toFixed(1)}<span style={{ fontSize: 11, fontWeight: 600, marginLeft: 2, color: 'var(--text3)', fontFamily: 'inherit' }}>s</span>
               </div>
             </div>
             <div style={{ width: 1, height: 28, background: 'var(--border)', flexShrink: 0 }} />
             <div style={{ textAlign: 'left', minWidth: 64 }}>
-              <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 1 }}>Restant</div>
+              <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 1 }}>{t.remaining}</div>
               <div style={{ fontSize: 22, fontWeight: 900, color: 'var(--text2)', lineHeight: 1, fontVariantNumeric: 'tabular-nums', fontFamily: 'monospace' }}>
                 {remaining.toFixed(1)}<span style={{ fontSize: 11, fontWeight: 600, marginLeft: 2, color: 'var(--text3)', fontFamily: 'inherit' }}>s</span>
               </div>
@@ -546,13 +571,6 @@ export default function Timeline() {
 
           {/* Durée */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '0 10px' }}>
-            {!hasRobots && (
-              <input type="range" min={0} max={simMaxTime} step={0.05} value={simTime}
-                onMouseDown={() => setSimPlaying(false)}
-                onChange={e => { setSimPlaying(false); setSimTime(+e.target.value) }}
-                style={{ width: 100, cursor: 'pointer', accentColor: 'var(--accent)' }}
-              />
-            )}
             <span style={{ fontSize: 11, color: 'var(--text3)' }}>{t.duration}</span>
             <input type="number" min={5} max={120} step={5} value={simMaxTime}
               onChange={e => setSimMaxTime(+e.target.value)}

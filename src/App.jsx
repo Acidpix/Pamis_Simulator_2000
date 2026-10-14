@@ -3,6 +3,7 @@ import SimCanvas from './components/SimCanvas.jsx'
 import LeftPanel from './components/LeftPanel.jsx'
 import RightPanel from './components/RightPanel.jsx'
 import Toolbar from './components/Toolbar.jsx'
+import EditBar from './components/EditBar.jsx'
 import Timeline from './components/Timeline.jsx'
 import { useSimStore, pushHistory, loadAutosave } from './store/simStore.js'
 import { useT } from './i18n.js'
@@ -12,6 +13,8 @@ export default function App() {
   const addWaypoint     = useSimStore(s => s.addWaypoint)
   const addRobot        = useSimStore(s => s.addRobot)
   const robots          = useSimStore(s => s.robots)
+  const obstacles       = useSimStore(s => s.obstacles)
+  const wpType          = useSimStore(s => s.wpType)
   const mode            = useSimStore(s => s.mode)
   const canvasBgColor   = useSimStore(s => s.canvasBgColor)
   const t = useT()
@@ -20,10 +23,10 @@ export default function App() {
 
   const handleTableClick = useCallback((tx, ty) => {
     if (mode !== 'draw') return
-    pushHistory({ robots })
+    pushHistory({ robots, obstacles })
     if (!selectedRobotId) { addRobot({ x: tx, y: ty }); return }
-    addWaypoint(selectedRobotId, tx, ty)
-  }, [mode, selectedRobotId, addWaypoint, addRobot, robots])
+    addWaypoint(selectedRobotId, tx, ty, wpType)
+  }, [mode, selectedRobotId, addWaypoint, addRobot, robots, obstacles, wpType])
 
   return (
     <div style={{
@@ -32,6 +35,7 @@ export default function App() {
       background: 'var(--bg)', overflow: 'hidden',
     }}>
       <Toolbar />
+      <EditBar />
 
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden', minHeight: 0 }}>
         <LeftPanel />

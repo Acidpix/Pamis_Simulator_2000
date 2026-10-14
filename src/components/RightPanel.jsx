@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSimStore, computeSegments, getRobotPose, pushHistory } from '../store/simStore.js'
 import { useT } from '../i18n.js'
+import { Icon, TrashBtn, WP_TYPES, WP_TYPE_ICON, WP_TYPE_COLOR, WP_TYPE_LABEL, WP_TYPE_DESC } from './Icons.jsx'
 
 const TABLE_W = 3.0
 const TABLE_H = 2.0
@@ -128,7 +129,7 @@ function CollisionBadge({ count, color, label }) {
       border: `1px solid ${color}44`,
       marginBottom: 6,
     }}>
-      <span style={{ fontSize: 12, fontWeight: 700, color }}>{label}</span>
+      <span style={{ fontSize: 12, fontWeight: 700, color, display: 'flex', alignItems: 'center', gap: 6 }}><Icon name="alert" size={14} />{label}</span>
       <span style={{
         fontSize: 11, fontWeight: 800, padding: '2px 8px', borderRadius: 8,
         background: color, color: '#fff',
@@ -165,83 +166,175 @@ function StatPill({ label, value, color }) {
 const WP_ACCENT = ['#818cf8','#38bdf8','#34d399','#fbbf24','#f472b6','#a78bfa','#2dd4bf','#fb923c']
 const wpAccent = idx => WP_ACCENT[idx % WP_ACCENT.length]
 
-function SegRow({ seg, idx, robotColor, t, onRemove }) {
-  const accent = wpAccent(idx)
+const miniInput = {
+  flex: 1, minWidth: 0, padding: '3px 5px', borderRadius: 6, border: '1px solid var(--border)',
+  background: 'var(--surface2)', fontSize: 12, color: 'var(--text)',
+}
+
+// Champ X/Y en mm (valeur stockée en mètres)
+function MmInput({ label, value, max, onChange }) {
   return (
-    <div style={{
-      margin: '0 0 8px',
-      borderRadius: 10,
-      background: 'var(--surface)',
-      border: '2px solid var(--border)',
-      borderLeft: `4px solid ${accent}`,
-      borderRadius: '8px 8px 0 0',
-      overflow: 'hidden',
-    }}>
-      {/* En-tête */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 8,
-        padding: '7px 10px 6px',
-        borderBottom: '2px solid var(--border)',
-      }}>
-        <span style={{
-          fontSize: 11, fontWeight: 800, padding: '2px 8px', borderRadius: 20,
-          background: `${accent}28`, color: accent, letterSpacing: '.01em',
-        }}>#{idx + 1}</span>
-        <span style={{ flex: 1, fontSize: 11, color: 'var(--text2)', fontWeight: 500 }}>
-          {t.segStartAt} <span style={{ color: 'var(--text)', fontWeight: 700 }}>{seg.startTime} s</span>
-        </span>
-        {seg.pause > 0 && (
-          <span style={{
-            fontSize: 11, padding: '2px 8px', borderRadius: 20,
-            background: 'var(--yellow-dim)', color: 'var(--yellow)', fontWeight: 500,
-          }}>+{seg.pause} s</span>
-        )}
-        {onRemove && (
-          <button
-            onClick={onRemove}
-            title="Supprimer ce waypoint"
-            style={{
-              width: 22, height: 22, borderRadius: '50%',
-              border: '2px solid var(--red)',
-              background: 'transparent', color: 'var(--red)', fontSize: 14,
-              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              flexShrink: 0, transition: 'all .12s', fontWeight: 700,
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'var(--red)'; e.currentTarget.style.color = '#fff' }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--red)' }}
-          >×</button>
-        )}
-      </div>
-
-      {/* Grille de métriques */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, padding: '7px 12px 8px' }}>
-        {[
-          { l: t.segDistance, v: seg.dist + ' mm' },
-          { l: t.segMotion,   v: seg.duration + ' s' },
-          { l: t.segHeading,  v: seg.angle + '°' },
-          { l: t.segTurn,     v: seg.relAngle !== null ? (seg.relAngle > 0 ? '+' : '') + seg.relAngle + '°' : '—' },
-          ...(seg.rotDuration > 0 ? [{ l: t.segRotation, v: seg.rotDuration + ' s' }] : []),
-          ...(seg.arrRotDuration > 0 ? [{ l: t.segArrRotation, v: seg.arrRotDuration + ' s' }] : []),
-        ].map(({ l, v }) => (
-          <div key={l} style={{ padding: '3px 0' }}>
-            <div style={{ fontSize: 10, color: 'var(--text2)', fontWeight: 700, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '.04em' }}>{l}</div>
-            <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', letterSpacing: '-.01em' }}>{v}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Coordonnées */}
-      <div style={{ padding: '0 12px 7px', fontSize: 11, color: 'var(--text2)', fontWeight: 600 }}>
-        ({Math.round(seg.from.x * 1000)}, {Math.round(seg.from.y * 1000)})
-        <span style={{ margin: '0 5px', opacity: .6 }}>→</span>
-        ({Math.round(seg.to.x * 1000)}, {Math.round(seg.to.y * 1000)}) mm
-      </div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+      <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 700, flexShrink: 0 }}>{label}</span>
+      <input type="number" value={Math.round((value ?? 0) * 1000)} min={0} max={max} step={1}
+        onChange={e => { const v = parseInt(e.target.value); if (!isNaN(v)) onChange(v / 1000) }}
+        style={miniInput} />
+      <span style={{ fontSize: 10, color: 'var(--text3)', flexShrink: 0 }}>mm</span>
     </div>
   )
 }
 
-function RobotTrajectory({ robot, defaultOpen, onPauseChange, onActionPauseChange, onHeadingChange, onRemoveWaypoint, onMoveWaypoint, t }) {
+function Row({ label, color, children }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <span style={{ fontSize: 11, color: color || 'var(--text)', flex: 1, fontWeight: 700 }}>{label}</span>
+      {children}
+    </div>
+  )
+}
+
+function TypeToggle({ value, onChange, t }) {
+  return (
+    <div style={{ display: 'flex', gap: 3, background: 'var(--surface2)', borderRadius: 'var(--r)', padding: 3 }}>
+      {WP_TYPES.map(type => {
+        const active = value === type, c = WP_TYPE_COLOR[type]
+        return (
+          <button key={type} onClick={() => onChange(type)} title={t[WP_TYPE_DESC[type]]} style={{
+            flex: 1, padding: '5px 2px', borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: 'pointer',
+            border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, transition: 'all .12s',
+            background: active ? c : 'transparent', color: active ? '#fff' : 'var(--text3)',
+            boxShadow: active ? `0 1px 6px ${c}66` : 'none',
+          }}>
+            <Icon name={WP_TYPE_ICON[type]} size={13} />{t[WP_TYPE_LABEL[type]]}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// Fiche d'un waypoint : en-tête toujours visible (clic = replier/déplier) + détails
+function WaypointCard({ robot, idx, seg, open, onToggle, ops, t }) {
+  const wp = robot.waypoints[idx]
+  const type = wp.type ?? 'point'
+  const accent = wpAccent(idx)
+  const isPass = type === 'pass'
+  return (
+    <div style={{
+      marginBottom: 8, background: 'var(--surface)', border: '1px solid var(--border)',
+      borderLeft: `4px solid ${accent}`, borderRadius: 8, overflow: 'hidden',
+    }}>
+      {/* En-tête */}
+      <div onClick={onToggle} style={{
+        display: 'flex', alignItems: 'center', gap: 6, padding: '6px 8px', cursor: 'pointer',
+        borderBottom: open ? '1px solid var(--border)' : 'none', background: open ? 'var(--surface2)' : 'transparent',
+      }}>
+        <Icon name={open ? 'chevronDown' : 'chevronRight'} size={15} color="var(--text3)" />
+        <span style={{
+          fontSize: 11, fontWeight: 800, padding: '2px 8px', borderRadius: 20,
+          background: `${accent}28`, color: accent,
+        }}>#{idx + 1}</span>
+        <span title={t[WP_TYPE_LABEL[type]]} style={{ display: 'flex', color: WP_TYPE_COLOR[type] }}>
+          <Icon name={WP_TYPE_ICON[type]} size={15} />
+        </span>
+        <span style={{ flex: 1, minWidth: 0, fontSize: 11, color: 'var(--text2)', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {t.segStartAt} <span style={{ color: 'var(--text)', fontWeight: 700 }}>{seg.startTime} s</span>
+        </span>
+        {seg.pause > 0 && (
+          <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, padding: '2px 7px', borderRadius: 20, background: 'var(--yellow-dim)', color: 'var(--yellow)', fontWeight: 600 }}>
+            <Icon name="timer" size={11} />{seg.pause}s
+          </span>
+        )}
+        {seg.actionPause > 0 && (
+          <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, padding: '2px 7px', borderRadius: 20, background: '#7048e822', color: '#9b72f5', fontWeight: 600 }}>
+            <Icon name="action" size={11} />{seg.actionPause}s
+          </span>
+        )}
+        {wp.reverse && !isPass && <span title={t.reverse} style={{ display: 'flex', color: '#f97316' }}><Icon name="reverse" size={13} /></span>}
+        <TrashBtn onClick={ops.remove} title={t.deleteWp} size={24} />
+      </div>
+
+      {open && (
+        <div style={{ padding: '8px 10px 10px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <TypeToggle value={type} onChange={ops.type} t={t} />
+
+          {/* Métriques */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 0 }}>
+            {[
+              { l: t.segDistance, v: seg.dist + ' mm' },
+              { l: t.segMotion,   v: seg.duration + ' s' },
+              { l: t.segHeading,  v: seg.angle + '°' },
+              { l: t.segTurn,     v: seg.relAngle !== null ? (seg.relAngle > 0 ? '+' : '') + seg.relAngle + '°' : '—' },
+              ...(seg.rotDuration > 0 ? [{ l: t.segRotation, v: seg.rotDuration + ' s' }] : []),
+              ...(seg.arrRotDuration > 0 ? [{ l: t.segArrRotation, v: seg.arrRotDuration + ' s' }] : []),
+            ].map(({ l, v }) => (
+              <div key={l} style={{ padding: '3px 0' }}>
+                <div style={{ fontSize: 10, color: 'var(--text2)', fontWeight: 700, marginBottom: 1, textTransform: 'uppercase', letterSpacing: '.04em' }}>{l}</div>
+                <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', letterSpacing: '-.01em' }}>{v}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Position */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+            <MmInput label="X" value={wp.x} max={3000} onChange={v => ops.move(v, wp.y)} />
+            <MmInput label="Y" value={wp.y} max={2000} onChange={v => ops.move(wp.x, v)} />
+          </div>
+
+          {/* Poignées de Bézier */}
+          {type === 'bezier' && wp.c1 && wp.c2 && ['c1', 'c2'].map((k, n) => (
+            <div key={k}>
+              <div style={{ fontSize: 10, color: WP_TYPE_COLOR.bezier, fontWeight: 700, marginBottom: 3, textTransform: 'uppercase', letterSpacing: '.04em' }}>{n === 0 ? t.ctrl1 : t.ctrl2}</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                <MmInput label="X" value={wp[k].x} max={3000} onChange={v => ops.ctrl(k, v, wp[k].y)} />
+                <MmInput label="Y" value={wp[k].y} max={2000} onChange={v => ops.ctrl(k, wp[k].x, v)} />
+              </div>
+            </div>
+          ))}
+
+          {isPass ? (
+            <div style={{ fontSize: 11, color: 'var(--text3)', lineHeight: 1.4 }}>{t.wpTypePassDesc}</div>
+          ) : (
+            <>
+              <Row label={t.pauseOnArrival}><PauseInput value={wp.pause ?? 0} onChange={ops.pause} /></Row>
+              <Row label={t.actionLabel} color="#9b72f5"><PauseInput value={wp.actionPause ?? 0} onChange={ops.action} /></Row>
+              <Row label={t.arrivalHeading}><HeadingInput value={wp.heading ?? null} onChange={ops.heading} /></Row>
+              {!robot.holonomic && (
+                <Row label={t.reverse} color={wp.reverse ? '#f97316' : 'var(--text)'}>
+                  <button onClick={() => ops.reverse(!wp.reverse)} style={{
+                    width: 36, height: 20, borderRadius: 10, border: 'none', cursor: 'pointer', flexShrink: 0,
+                    background: wp.reverse ? '#f97316' : 'var(--surface3)', transition: 'all .2s', position: 'relative',
+                  }}>
+                    <span style={{ position: 'absolute', top: 3, left: wp.reverse ? 18 : 3, width: 14, height: 14, borderRadius: '50%', background: '#fff', transition: 'all .2s', boxShadow: '0 1px 3px rgba(0,0,0,.2)' }} />
+                  </button>
+                </Row>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function RobotTrajectory({ robot, defaultOpen, makeOps, t }) {
   const [open, setOpen] = useState(defaultOpen)
+  // Fiches dépliées : à l'ajout d'un waypoint, les précédentes se replient et la nouvelle se déplie
+  const [openWps, setOpenWps] = useState(() => new Set())
+  const prevIds = useRef(null)
+  useEffect(() => {
+    const ids = robot.waypoints.map(w => w.id)
+    if (prevIds.current !== null) {
+      const known = new Set(prevIds.current)
+      const added = ids.filter(id => !known.has(id))
+      if (added.length === 1) setOpenWps(new Set(added))
+      else if (added.length > 1) setOpenWps(new Set())
+      else setOpenWps(o => new Set(ids.filter(id => o.has(id))))
+    }
+    prevIds.current = ids
+  }, [robot.waypoints])
+  const toggleWp = id => setOpenWps(o => { const n = new Set(o); if (n.has(id)) n.delete(id); else n.add(id); return n })
+
   const segments = useMemo(() => computeSegments(robot), [robot])
   const totalDistMm = segments.reduce((a,s) => a + s.dist, 0)
   const totalTime   = segments.reduce((a,s) => a + s.rotDuration + s.duration + (s.arrRotDuration||0) + (s.pause||0) + (s.actionPause||0), 0) + (robot.startDelay ?? 0)
@@ -273,7 +366,7 @@ function RobotTrajectory({ robot, defaultOpen, onPauseChange, onActionPauseChang
         </span>
         <span style={{ fontSize: 12, color: 'var(--text3)', fontWeight: 400, flexShrink: 0 }}>{totalDistMm} mm</span>
         <span style={{ fontSize: 12, color: 'var(--text3)', fontWeight: 400, flexShrink: 0 }}>{totalTime.toFixed(1)} s</span>
-        <span style={{ fontSize: 28, color: 'var(--text3)', marginLeft: 0, height: 20, position: 'relative', top: -8 }}>{open ? '▾' : '▸'}</span>
+        <Icon name={open ? 'chevronDown' : 'chevronRight'} size={16} color="var(--text3)" />
       </div>
       {open && (
         <>
@@ -288,60 +381,10 @@ function RobotTrajectory({ robot, defaultOpen, onPauseChange, onActionPauseChang
           ) : (
             <div style={{ padding: '10px 12px 4px' }}>
               {segments.map((seg, i) => {
-                const accent = wpAccent(i)
+                const wp = robot.waypoints[i]
                 return (
-                  <div key={i} style={{ marginBottom: 10 }}>
-                    <SegRow seg={seg} idx={i} robotColor={robot.color} t={t}
-                      onRemove={onRemoveWaypoint ? () => onRemoveWaypoint(i) : null} />
-                    {(onPauseChange || onActionPauseChange || onHeadingChange) && (
-                      <div style={{
-                        padding: '8px 12px',
-                        background: 'var(--surface3)',
-                        border: `2px solid var(--border)`,
-                        borderTop: 'none',
-                        borderLeft: `4px solid ${accent}`,
-                        borderRadius: '0 0 8px 8px',
-                        display: 'flex', flexDirection: 'column', gap: 6,
-                      }}>
-                        {onMoveWaypoint && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-                            <span style={{ fontSize: 11, color: 'var(--text)', fontWeight: 700, minWidth: 14 }}>X</span>
-                            <input type="number"
-                              value={Math.round((robot.waypoints[i]?.x ?? 0) * 1000)}
-                              min={0} max={3000} step={1}
-                              onChange={e => { const v = parseInt(e.target.value); if (!isNaN(v)) onMoveWaypoint(i, v/1000, robot.waypoints[i]?.y ?? 0) }}
-                              style={{ flex: 1, padding: '3px 6px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface2)', fontSize: 12, color: 'var(--text)' }} />
-                            <span style={{ fontSize: 11, color: 'var(--text3)', minWidth: 18 }}>mm</span>
-                            <span style={{ fontSize: 11, color: 'var(--text)', fontWeight: 700, minWidth: 14 }}>Y</span>
-                            <input type="number"
-                              value={Math.round((robot.waypoints[i]?.y ?? 0) * 1000)}
-                              min={0} max={2000} step={1}
-                              onChange={e => { const v = parseInt(e.target.value); if (!isNaN(v)) onMoveWaypoint(i, robot.waypoints[i]?.x ?? 0, v/1000) }}
-                              style={{ flex: 1, padding: '3px 6px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface2)', fontSize: 12, color: 'var(--text)' }} />
-                            <span style={{ fontSize: 11, color: 'var(--text3)', minWidth: 18 }}>mm</span>
-                          </div>
-                        )}
-                        {onPauseChange && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ fontSize: 11, color: 'var(--text)', flex: 1, fontWeight: 700 }}>{t.pauseOnArrival}</span>
-                            <PauseInput value={robot.waypoints[i]?.pause ?? 0} onChange={v => onPauseChange(i, v)} />
-                          </div>
-                        )}
-                        {onActionPauseChange && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ fontSize: 11, color: '#9b72f5', flex: 1, fontWeight: 700 }}>Action</span>
-                            <PauseInput value={robot.waypoints[i]?.actionPause ?? 0} onChange={v => onActionPauseChange(i, v)} />
-                          </div>
-                        )}
-                        {onHeadingChange && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ fontSize: 11, color: 'var(--text)', flex: 1, fontWeight: 700 }}>{t.arrivalHeading}</span>
-                            <HeadingInput value={robot.waypoints[i]?.heading ?? null} onChange={v => onHeadingChange(i, v)} />
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                  <WaypointCard key={wp.id ?? i} robot={robot} idx={i} seg={seg} t={t}
+                    open={openWps.has(wp.id)} onToggle={() => toggleWp(wp.id)} ops={makeOps(robot, i)} />
                 )
               })}
             </div>
@@ -352,13 +395,47 @@ function RobotTrajectory({ robot, defaultOpen, onPauseChange, onActionPauseChang
   )
 }
 
+// Export JSON des trajectoires (utilisé aussi par la Toolbar)
+export function exportTrajectories(robots) {
+  const mm = v => Math.round(v * 1000)
+  const data = robots.map(r => ({
+    name: r.name, color: r.color,
+    startPosition: { x_mm: mm(r.x), y_mm: mm(r.y) },
+    startHeading_deg: r.heading,
+    startDelay_s: r.startDelay,
+    speed_mm_s: mm(r.speed),
+    radius_mm: mm(r.radius),
+    lookahead_mm: mm(r.lookahead ?? 0.15),
+    segments: computeSegments(r).map((s, i) => {
+      const wp = r.waypoints[i]
+      return {
+        type: s.type,
+        from: { x_mm: mm(s.from.x), y_mm: mm(s.from.y) },
+        to:   { x_mm: mm(s.to.x),   y_mm: mm(s.to.y) },
+        ...(s.type === 'bezier' && wp?.c1 && wp?.c2 ? {
+          control1: { x_mm: mm(wp.c1.x), y_mm: mm(wp.c1.y) },
+          control2: { x_mm: mm(wp.c2.x), y_mm: mm(wp.c2.y) },
+        } : {}),
+        distance_mm: s.dist, heading_deg: s.angle, rotation_deg: s.relAngle,
+        start_time_s: s.startTime, duration_s: s.duration, pause_s: s.pause,
+      }
+    }),
+  }))
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }))
+  a.download = 'pamis_trajectoires.json'; a.click()
+}
+
 export default function RightPanel() {
   const t = useT()
   const updateWaypointPause = useSimStore(s => s.updateWaypointPause)
   const updateWaypointActionPause = useSimStore(s => s.updateWaypointActionPause)
   const updateWaypointHeading = useSimStore(s => s.updateWaypointHeading)
-  const moveWaypoint    = useSimStore(s => s.moveWaypoint)
-  const removeWaypoint  = useSimStore(s => s.removeWaypoint)
+  const moveWaypoint          = useSimStore(s => s.moveWaypoint)
+  const moveWaypointCtrl      = useSimStore(s => s.moveWaypointCtrl)
+  const updateWaypointType    = useSimStore(s => s.updateWaypointType)
+  const updateWaypointReverse = useSimStore(s => s.updateWaypointReverse)
+  const removeWaypoint        = useSimStore(s => s.removeWaypoint)
   const robots          = useSimStore(s => s.robots)
   const selectedRobotId = useSimStore(s => s.selectedRobotId)
   const collisions      = useSimStore(s => s.collisions)
@@ -376,30 +453,42 @@ export default function RightPanel() {
     a.download = 'pamis_world.world'; a.click()
   }
 
-  const handleExport = () => {
-    const data = robots.map(r => ({
-      name: r.name, color: r.color,
-      startPosition: { x_mm: Math.round(r.x*1000), y_mm: Math.round(r.y*1000) },
-      startHeading_deg: r.heading,
-      startDelay_s: r.startDelay,
-      speed_mm_s: Math.round(r.speed*1000),
-      radius_mm: Math.round(r.radius*1000),
-      segments: computeSegments(r).map(s => ({
-        from: { x_mm: Math.round(s.from.x*1000), y_mm: Math.round(s.from.y*1000) },
-        to:   { x_mm: Math.round(s.to.x*1000),   y_mm: Math.round(s.to.y*1000) },
-        distance_mm: s.dist, heading_deg: s.angle, rotation_deg: s.relAngle,
-        start_time_s: s.startTime, duration_s: s.duration, pause_s: s.pause,
-      })),
-    }))
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}))
-    a.download = 'pamis_trajectoires.json'; a.click()
-  }
+  const handleExport = () => exportTrajectories(robots)
+
+  // Panneau redimensionnable (poignée sur le bord gauche)
+  const [panelW, setPanelW] = useState(340)
+  const onResizeStart = useCallback(e => {
+    e.preventDefault()
+    const startX = e.clientX, startW = panelW
+    const onMove = ev => setPanelW(Math.max(260, Math.min(600, startW - (ev.clientX - startX))))
+    const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }, [panelW])
+
+  // Actions d'une fiche waypoint (l'historique est enregistré avant chaque modification structurelle)
+  const makeOps = (r, idx) => ({
+    remove:  () => { pushHistory({ robots, obstacles }); removeWaypoint(r.id, idx) },
+    type:    v => { pushHistory({ robots, obstacles }); updateWaypointType(r.id, idx, v) },
+    move:    (x, y) => moveWaypoint(r.id, idx, x, y),
+    ctrl:    (k, x, y) => moveWaypointCtrl(r.id, idx, k, x, y),
+    pause:   v => updateWaypointPause(r.id, idx, v),
+    action:  v => updateWaypointActionPause(r.id, idx, v),
+    heading: v => updateWaypointHeading(r.id, idx, v),
+    reverse: v => { pushHistory({ robots, obstacles }); updateWaypointReverse(r.id, idx, v) },
+  })
 
   return (
+    <div style={{ display: 'flex', flexShrink: 0, height: '100%' }}>
+      <div
+        onMouseDown={onResizeStart}
+        style={{ width: 4, cursor: 'col-resize', background: 'var(--border)', flexShrink: 0, transition: 'background .15s' }}
+        onMouseEnter={e => e.currentTarget.style.background = 'var(--accent)'}
+        onMouseLeave={e => e.currentTarget.style.background = 'var(--border)'}
+      />
     <div style={{
-      width: 260, height: '100%', overflowY: 'auto', flexShrink: 0,
-      padding: 10, borderLeft: '1px solid var(--border)', background: 'var(--bg)',
+      width: panelW, height: '100%', overflowY: 'auto', flexShrink: 0, boxSizing: 'border-box',
+      padding: 10, background: 'var(--bg)',
     }}>
 
       {/* ── Collisions ── */}
@@ -469,7 +558,7 @@ export default function RightPanel() {
           fontSize: 12, color: 'var(--green)', fontWeight: 600,
           display: 'flex', alignItems: 'center', gap: 7,
         }}>
-          <span>✓</span> {t.noCollision}
+          <Icon name="check" size={14} /> {t.noCollision}
         </div>
       )}
 
@@ -478,11 +567,7 @@ export default function RightPanel() {
         <RobotTrajectory
           key={r.id} robot={r} t={t}
           defaultOpen={r.id === selectedRobotId || robots.length === 1}
-          onPauseChange={(idx, v) => updateWaypointPause(r.id, idx, v)}
-          onActionPauseChange={(idx, v) => updateWaypointActionPause(r.id, idx, v)}
-          onHeadingChange={(idx, v) => updateWaypointHeading(r.id, idx, v)}
-          onMoveWaypoint={(idx, x, y) => moveWaypoint(r.id, idx, x, y)}
-          onRemoveWaypoint={idx => { pushHistory({ robots, obstacles }); removeWaypoint(r.id, idx) }}
+          makeOps={makeOps}
         />
       ))}
 
@@ -516,6 +601,7 @@ export default function RightPanel() {
           </div>
         </div>
       )}
+    </div>
     </div>
   )
 }

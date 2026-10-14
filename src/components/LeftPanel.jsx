@@ -1,6 +1,7 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react'
 import { useSimStore, pushHistory, clearAutosave, obsStlCache } from '../store/simStore.js'
 import { useT } from '../i18n.js'
+import { Icon, TrashBtn } from './Icons.jsx'
 
 const mToMm = m => Math.round(m * 1000)
 const mmToM = mm => mm / 1000
@@ -142,6 +143,7 @@ function SectionCard({ accent, children }) {
 
 // ── Ligne d'obstacle ──
 function ObsRow({ obs, selected, onSelect, onRemove }) {
+  const t = useT()
   return (
     <div onClick={onSelect} style={{
       display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px',
@@ -152,8 +154,7 @@ function ObsRow({ obs, selected, onSelect, onRemove }) {
     }}>
       <span style={{ width: 10, height: 10, borderRadius: obs.shape==='circle' ? '50%' : '2px', background: obs.color, display: 'inline-block', flexShrink: 0 }} />
       <span style={{ flex: 1, fontWeight: 600, fontSize: 13, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{obs.name}</span>
-      <button onClick={e => { e.stopPropagation(); onRemove() }}
-        style={{ width: 20, height: 20, borderRadius: 4, border: 'none', background: 'transparent', color: 'var(--text3)', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, lineHeight: 1 }}>×</button>
+      <TrashBtn onClick={onRemove} title={t.deleteObs} size={22} />
     </div>
   )
 }
@@ -161,6 +162,7 @@ function ObsRow({ obs, selected, onSelect, onRemove }) {
 // ── Propriétés d'un robot (corps) ──
 // key={robot.id} sur le parent force le remontage quand on change de robot → reset des SubSec
 function RobotProps({ robot, onUpdate, robots, obstacles, stlRef }) {
+  const t = useT()
   const [linUnit, setLinUnit] = useState('mm/s')
   const [angUnit, setAngUnit] = useState('°/s')
   const norm360 = v => ((v % 360) + 360) % 360
@@ -229,17 +231,22 @@ function RobotProps({ robot, onUpdate, robots, obstacles, stlRef }) {
         </Field>
         <Field label="Mode">
           <SegToggle value={robot.waypointMode ?? 'stop'}
-            options={[{ v:'stop', label:'⏸ Stop aux pts' }, { v:'continuous', label:'→ Continu' }]}
+            options={[{ v:'stop', label:'Stop aux pts' }, { v:'continuous', label:'Continu' }]}
             onChange={v => ur({ waypointMode: v })} />
         </Field>
         <Toggle value={!!robot.holonomic} onChange={v => ur({ holonomic: v })} label="Holonome (ne tourne pas)" />
+        {robot.waypoints.some(w => w.type === 'pass') && (
+          <Field label={t.lookahead}>
+            <NumInput value={mToMm(robot.lookahead ?? 0.15)} min={20} max={1000} step={10} unit="mm" onChange={v => ur({ lookahead: mmToM(v) })} />
+          </Field>
+        )}
       </SubSec>
 
       {/* Collision — fermé */}
       <SubSec title="Collision">
         <Field label="Forme de collision">
           <SegToggle value={robot.collisionShape ?? 'circle'}
-            options={[{ v:'circle', label:'○ Cercle' }, { v:'rect', label:'▭ Rect' }]}
+            options={[{ v:'circle', label:'Cercle' }, { v:'rect', label:'Rect' }]}
             onChange={v => ur({ collisionShape: v })} />
         </Field>
         {(robot.collisionShape ?? 'circle') === 'circle' ? (
@@ -274,7 +281,7 @@ function RobotProps({ robot, onUpdate, robots, obstacles, stlRef }) {
       {/* Géométrie STL — fermé */}
       <SubSec title="Géométrie STL">
         <ActionBtn full onClick={() => stlRef.current?.click()}>
-          📦 {robot.hasStl ? '✓ STL importé — changer' : 'Importer fichier STL'}
+          <Icon name="package" size={14} /> {robot.hasStl ? 'STL importé — changer' : 'Importer fichier STL'}
         </ActionBtn>
         {robot.hasStl && (
           <div style={{ marginTop: 10 }}>
@@ -318,7 +325,7 @@ function ClearAutosaveBtn({ t }) {
       padding: '10px 12px',
     }}>
       <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--red)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
-        <span>⚠</span> {t.autoSave}
+        <Icon name="alert" size={14} /> {t.autoSave}
       </div>
       <button
         onMouseDown={onDown} onMouseUp={stop} onMouseLeave={stop}
@@ -348,9 +355,9 @@ function ClearAutosaveBtn({ t }) {
 }
 
 const TABS = [
-  { id: 'robots',    icon: '🤖', labelKey: 'robots'      },
-  { id: 'obstacles', icon: '🧱', labelKey: 'obstacles'   },
-  { id: 'settings',  icon: '⚙️', labelKey: 'settingsTab' },
+  { id: 'robots',    icon: 'bot',      labelKey: 'robots'      },
+  { id: 'obstacles', icon: 'brick',    labelKey: 'obstacles'   },
+  { id: 'settings',  icon: 'settings', labelKey: 'settingsTab' },
 ]
 
 function TabBar({ active, onChange, t }) {
@@ -366,7 +373,7 @@ function TabBar({ active, onChange, t }) {
             color: isActive ? 'var(--accent)' : 'var(--text3)',
             transition: 'all .12s', marginBottom: -1,
           }}>
-            <span style={{ fontSize: 16 }}>{tab.icon}</span>
+            <Icon name={tab.icon} size={19} />
             <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em' }}>{t[tab.labelKey]}</span>
           </button>
         )
@@ -389,7 +396,7 @@ function GitConfigCard({ t }) {
     }}>
       <div style={{ padding: '9px 12px 12px' }}>
         <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--purple)', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-          🐙 {t.gitConfigTitle}
+          <Icon name="git" size={15} /> {t.gitConfigTitle}
         </div>
 
         <Label>{t.gitRepoUrl}</Label>
@@ -560,7 +567,7 @@ export default function LeftPanel() {
       width: robot.width, height: robot.height, radius: robot.radius,
       speed: robot.speed, accel: robot.accel,
       rotSpeed: robot.rotSpeed, rotAccel: robot.rotAccel,
-      heading: robot.heading, startDelay: robot.startDelay,
+      heading: robot.heading, startDelay: robot.startDelay, lookahead: robot.lookahead,
       waypointMode: robot.waypointMode,
       holonomic: robot.holonomic,
       collisionShape: robot.collisionShape,
@@ -610,10 +617,7 @@ export default function LeftPanel() {
                         <span style={{ fontSize: 10, color: 'var(--text3)', background: 'var(--surface3)', borderRadius: 4, padding: '2px 5px', fontWeight: 600, flexShrink: 0 }}>
                           {robot.waypoints.length}pt
                         </span>
-                        <button
-                          onClick={e => { e.stopPropagation(); pushHistory({ robots, obstacles }); removeRobot(robot.id) }}
-                          style={{ width: 20, height: 20, borderRadius: 4, border: 'none', background: 'transparent', color: 'var(--text3)', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, lineHeight: 1 }}
-                        >×</button>
+                        <TrashBtn title={t.deleteRobot} size={22} onClick={() => { pushHistory({ robots, obstacles }); removeRobot(robot.id) }} />
                       </div>
                     )
                   })}
@@ -660,11 +664,11 @@ export default function LeftPanel() {
                         <div style={{ display: 'flex', gap: 6, padding: '0 12px 12px' }}>
                           <ActionBtn color="var(--red)" style={{ flex: 1 }}
                             onClick={() => { pushHistory({ robots, obstacles }); clearWaypoints(robot.id) }}>
-                            🗑 Trajectoire
+                            <Icon name="trash" size={14} /> {t.trajectory}
                           </ActionBtn>
                           <ActionBtn color="var(--purple)" style={{ flex: 1 }}
                             onClick={() => handleDuplicate(robot)}>
-                            ⧉ Dupliquer
+                            <Icon name="copy" size={14} /> {t.duplicate}
                           </ActionBtn>
                         </div>
                       </div>
@@ -713,12 +717,12 @@ export default function LeftPanel() {
                     <SubSec title="Dimensions" defaultOpen={true}>
                       <Field label="Forme visuelle">
                         <SegToggle value={selObs.shape}
-                          options={[{ v:'rect', label:'▭ Rectangle' }, { v:'circle', label:'○ Cercle' }]}
+                          options={[{ v:'rect', label:'Rectangle' }, { v:'circle', label:'Cercle' }]}
                           onChange={v => uo({ shape: v })} />
                       </Field>
                       <Field label="Forme de collision">
                         <SegToggle value={selObs.collisionShape ?? 'rect'}
-                          options={[{ v:'rect', label:'▭ Rect' }, { v:'circle', label:'○ Cercle' }]}
+                          options={[{ v:'rect', label:'Rect' }, { v:'circle', label:'Cercle' }]}
                           onChange={v => uo({ collisionShape: v })} />
                       </Field>
                       {selObs.shape === 'rect' ? (
@@ -757,7 +761,7 @@ export default function LeftPanel() {
 
                     <SubSec title="Géométrie STL">
                       <ActionBtn full onClick={() => obsStlRef.current?.click()}>
-                        📦 {selObs.hasStl ? '✓ STL importé — changer' : 'Importer fichier STL'}
+                        <Icon name="package" size={14} /> {selObs.hasStl ? 'STL importé — changer' : 'Importer fichier STL'}
                       </ActionBtn>
                       {selObs.hasStl && (
                         <div style={{ marginTop: 10 }}>
@@ -790,7 +794,7 @@ export default function LeftPanel() {
                 </div>
                 <input type="file" ref={bgRef} accept="image/*" onChange={handleBgImport} style={{ display: 'none' }} />
                 <ActionBtn full onClick={() => bgRef.current?.click()} style={{ marginBottom: 6 }}>
-                  🖼 {bgImage ? "Changer l'image de fond" : 'Ajouter image de fond'}
+                  <Icon name="image" size={14} /> {bgImage ? "Changer l'image de fond" : 'Ajouter image de fond'}
                 </ActionBtn>
                 {bgImage && (
                   <ActionBtn full color="var(--red)" style={{ marginBottom: 10 }}

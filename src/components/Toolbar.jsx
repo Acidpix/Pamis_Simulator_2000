@@ -1,43 +1,28 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
-import { useSimStore, pushHistory, computeSegments } from '../store/simStore.js'
+import { useSimStore, pushHistory } from '../store/simStore.js'
 import { useT } from '../i18n.js'
 import { importGazeboSDF } from '../utils/importGazeboSDF.js'
-import { generateGazeboSDF } from './RightPanel.jsx'
+import { generateGazeboSDF, exportTrajectories } from './RightPanel.jsx'
+import { Icon } from './Icons.jsx'
 
 const GIT_SERVER = window.location.origin
 
+const SAVE_VERSION = 3
+
+// Tous les réglages du robot sont sauvegardés (le STL, binaire, n'est pas inclus)
+const savableRobot = r => ({ ...r, hasStl: false, shapeType: r.shapeType==='stl' ? 'rect' : r.shapeType })
+
 function buildPayload(robots, obstacles, meta) {
   return JSON.stringify({
-    version: 2, savedAt: new Date().toISOString(), meta,
-    robots: robots.map(r => ({
-      id:r.id, name:r.name, color:r.color,
-      x:r.x, y:r.y, heading:r.heading,
-      width:r.width, height:r.height, radius:r.radius,
-      speed:r.speed, startDelay:r.startDelay,
-      shapeType: r.shapeType==='stl'?'rect':r.shapeType,
-      waypoints:r.waypoints,
-    })),
-    obstacles: obstacles.map(o => ({ ...o })),
+    version: SAVE_VERSION, savedAt: new Date().toISOString(), meta,
+    robots: robots.map(savableRobot),
+    obstacles: obstacles.map(o => ({ ...o, hasStl: false })),
   }, null, 2)
 }
 
-const SAVE_VERSION = 2
-
 function saveToFile(robots, obstacles, meta) {
-  const payload = {
-    version: SAVE_VERSION, savedAt: new Date().toISOString(), meta,
-    robots: robots.map(r => ({
-      id:r.id, name:r.name, color:r.color,
-      x:r.x, y:r.y, heading:r.heading,
-      width:r.width, height:r.height, radius:r.radius,
-      speed:r.speed, startDelay:r.startDelay,
-      shapeType: r.shapeType==='stl'?'rect':r.shapeType,
-      waypoints:r.waypoints,
-    })),
-    obstacles: obstacles.map(o => ({ ...o })),
-  }
   const a = document.createElement('a')
-  a.href = URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}))
+  a.href = URL.createObjectURL(new Blob([buildPayload(robots, obstacles, meta)], {type:'application/json'}))
   a.download = `pamis_save_${new Date().toISOString().slice(0,16).replace('T','_').replace(':','h')}.json`
   a.click()
 }
@@ -184,7 +169,7 @@ function CommitModal({ t, onClose, onCommit, step, progress, error }) {
         padding: '22px 24px', display: 'flex', flexDirection: 'column', gap: 14,
       }}>
         <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8 }}>
-          🐙 {t.gitCommitTitle}
+          <Icon name="git" size={17} /> {t.gitCommitTitle}
         </div>
 
         <textarea
@@ -245,7 +230,7 @@ function CommitModal({ t, onClose, onCommit, step, progress, error }) {
               fontSize: 13, fontWeight: 700, cursor: !msg.trim() || busy ? 'not-allowed' : 'pointer',
               opacity: !msg.trim() || busy ? 0.5 : 1,
             }}
-          >🐙 {t.gitCommitBtn}</button>
+          ><Icon name="git" size={14} /> {t.gitCommitBtn}</button>
         </div>
       </div>
     </div>
@@ -270,7 +255,7 @@ function GitPickerModal({ t, onClose, onPick }) {
         padding: '22px 24px', display: 'flex', flexDirection: 'column', gap: 14,
       }}>
         <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8 }}>
-          🐙 {t.gitPickTitle}
+          <Icon name="git" size={17} /> {t.gitPickTitle}
         </div>
 
         <GitPickerList t={t} onFiles={setFiles} onError={setError} onLoadingChange={setLoading} selected={selected} onSelect={setSelected} />
@@ -293,7 +278,7 @@ function GitPickerModal({ t, onClose, onPick }) {
               opacity: !selected || pulling || loading ? 0.5 : 1,
             }}
           >
-            {pulling ? t.gitPulling : `⬇ ${t.gitPullBtn}`}
+            {pulling ? t.gitPulling : t.gitPullBtn}
           </button>
         </div>
       </div>
@@ -335,7 +320,7 @@ function GitPickerList({ t, onFiles, onError, onLoadingChange, selected, onSelec
 
   if (files === null) return (
     <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text3)', fontSize: 13 }}>
-      ⏳ {t.gitListLoading}
+      <Icon name="loader" size={14} style={{ display: 'inline-block', verticalAlign: 'middle' }} /> {t.gitListLoading}
     </div>
   )
   if (files.length === 0) return (
@@ -361,7 +346,7 @@ function GitPickerList({ t, onFiles, onError, onLoadingChange, selected, onSelec
           onMouseEnter={e => { if (selected !== f) e.currentTarget.style.background = 'var(--surface3)' }}
           onMouseLeave={e => { if (selected !== f) e.currentTarget.style.background = 'transparent' }}
         >
-          <span style={{ opacity: 0.5 }}>📄</span> {f}
+          <span style={{ opacity: 0.5, display: 'flex' }}><Icon name="file" size={14} /></span> {f}
         </div>
       ))}
     </div>
@@ -594,18 +579,6 @@ export default function Toolbar() {
 
       {/* ── Outils centrés ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        {/* Mode */}
-        <BtnGroup>
-          <BtnGroupItem active={mode==='draw'} color='var(--accent)' onClick={() => setMode('draw')}>
-            {t.draw}
-          </BtnGroupItem>
-          <BtnGroupItem active={mode==='move'} color='var(--purple)' onClick={() => setMode('move')}>
-            {t.move}
-          </BtnGroupItem>
-        </BtnGroup>
-
-        <Sep />
-
         {/* Vue */}
         <BtnGroup>
           <BtnGroupItem active={viewMode==='2d'} color='#f97316' onClick={() => setViewMode('2d')}>2D</BtnGroupItem>
@@ -622,23 +595,7 @@ export default function Toolbar() {
         <DropdownBtn label={t.save} items={[
           { label: t.saveLocal, action: () => saveToFile(robots, obstacles, { simMaxTime, simSpeed, gridColor, gridMinorStep, gridMajorStep, viewportColor, canvasBgColor }) },
           { label: t.saveGit,   action: handleGitSave },
-          { label: t.exportJson, action: () => {
-            const data = robots.map(r => ({
-              name: r.name, color: r.color,
-              startPosition: { x_mm: Math.round(r.x*1000), y_mm: Math.round(r.y*1000) },
-              startHeading_deg: r.heading, startDelay_s: r.startDelay,
-              speed_mm_s: Math.round(r.speed*1000), radius_mm: Math.round(r.radius*1000),
-              segments: computeSegments(r).map(s => ({
-                from: { x_mm: Math.round(s.from.x*1000), y_mm: Math.round(s.from.y*1000) },
-                to:   { x_mm: Math.round(s.to.x*1000),   y_mm: Math.round(s.to.y*1000) },
-                distance_mm: s.dist, heading_deg: s.angle, rotation_deg: s.relAngle,
-                start_time_s: s.startTime, duration_s: s.duration, pause_s: s.pause,
-              })),
-            }))
-            const a = document.createElement('a')
-            a.href = URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}))
-            a.download = 'pamis_trajectoires.json'; a.click()
-          }},
+          { label: t.exportJson, action: () => exportTrajectories(robots) },
           { label: t.exportGazebo, action: () => {
             const sdf = generateGazeboSDF(robots, obstacles, simMaxTime)
             const a = document.createElement('a')
@@ -676,8 +633,8 @@ export default function Toolbar() {
 
 
         {/* Undo / Redo */}
-        <TBtn onClick={undo} title={t.undoTitle}>↩</TBtn>
-        <TBtn onClick={redo} title={t.redoTitle}>↪</TBtn>
+        <TBtn onClick={undo} title={t.undoTitle}><Icon name="undo" size={16} /></TBtn>
+        <TBtn onClick={redo} title={t.redoTitle}><Icon name="redo" size={16} /></TBtn>
       </div>
 
       {/* ── Langue + thème (droite absolu) ── */}
@@ -714,7 +671,7 @@ export default function Toolbar() {
             fontSize: 15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}
         >
-          {darkMode ? '☀️' : '🌙'}
+          <Icon name={darkMode ? 'sun' : 'moon'} size={17} />
         </button>
       </div>
     </div>
