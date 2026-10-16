@@ -580,7 +580,7 @@ export const useSimStore = create(immer((set, get) => ({
 
   tableW: 3.0, tableH: 2.0,
   showGrid: true, gridColor: '#ffffff', gridMinorStep: 10, gridMajorStep: 50,
-  bgImage: '/table_FINALE_1.jpg', viewMode: '2d', darkMode: false,
+  bgImage: '/Eurobot2027_Rules_FR.webp', viewMode: '2d', darkMode: false,
   viewportColor: '#2d6e3e',
   canvasBgColor: '#2e4a76',
   lang: 'fr',
