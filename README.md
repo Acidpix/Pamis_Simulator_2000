@@ -10,13 +10,25 @@ Permet de planifier, visualiser et exporter les trajectoires de plusieurs robots
 ### Robots
 - Ajout de plusieurs robots — couleur, nom, dimensions / Add multiple robots — color, name, dimensions
 - Tracé de trajectoire par clic (mode **Tracer** / **Draw**)
+- **Barre d'édition** (2e barre) : menu « Ajouter waypoint ▾ type » et bouton « Déplacer waypoint » ; touches **1 / 2 / 3** pour choisir le type
 - **Insertion de waypoint** entre deux existants : cliquer sur le segment de trajectoire en mode Tracer
 - Suppression de waypoint : cliquer sur le cercle du waypoint en mode Tracer
 - Déplacement de robots et waypoints par glisser-déposer (mode **Déplacer** / **Move**)
 - Snap angulaire à 15° en maintenant **Ctrl** lors du déplacement d'un waypoint
-- Raccourci **Q** : bascule entre les modes Tracer et Déplacer
+- Raccourcis : **Q** bascule Tracer / Déplacer, **1 / 2 / 3** type de waypoint, **Espace** lecture / pause
 - **Clic molette** (2D & 3D) : panoramique de la vue (déplacement gauche/droite/haut/bas)
 - **Numéros de waypoints** affichés sur la timeline au-dessus de chaque repère
+
+### Types de waypoint / Waypoint types
+| Type | Touche | Comportement |
+|---|---|---|
+| **Point** | `1` | Arrêt au point, segment droit |
+| **Bézier** | `2` | Le segment d'arrivée est une courbe de Bézier cubique, réglable via deux poignées (c1 / c2) ; arrêt au point |
+| **Passage** (*pass*) | `3` | Pas d'arrêt : spline Catmull-Rom centripète suivie en **pure pursuit** (distance d'anticipation `lookahead` réglable par robot) ; ni pause, ni action, ni cap |
+
+- Marche arrière (*reverse*) par waypoint pour les robots non holonomes
+- En mode holonome, les blocs de passage suivent exactement la spline
+- Déplacer un waypoint déplace aussi ses poignées Bézier adjacentes (la courbe garde sa forme)
 
 ### Cinématique / Kinematics
 - Profil de vitesse **trapézoïdal** (accél. / décél.) — mode *Stop aux waypoints*
@@ -25,7 +37,7 @@ Permet de planifier, visualiser et exporter les trajectoires de plusieurs robots
 - Vitesse et accélération **linéaires** indépendantes (mm/s ou m/s)
 - Vitesse et accélération **angulaires** indépendantes (°/s ou rad/s)
 - **Pause** configurable à chaque waypoint (panneau droit)
-- **Pause Action** 💪 : pause pendant laquelle un émoji biceps clignote sur le robot — configurable par waypoint (panneau droit)
+- **Pause Action** : pause pendant laquelle un pictogramme « action » clignote sur le robot — configurable par waypoint (panneau droit)
 - Délai de départ par robot
 
 ### Détection de collisions / Collision detection
@@ -42,22 +54,24 @@ Permet de planifier, visualiser et exporter les trajectoires de plusieurs robots
 - Durée de simulation configurable (5–120 s)
 - Vue **2D** (orthographique) et **3D** (perspective + OrbitControls)
 - Numéros de waypoints lisibles sur la timeline (badges colorés)
+- Fiches de waypoints repliables dans le panneau droit
 - Calcul du temps total corrigé : rotations d'arrivée et pauses action incluses
 
 ### Sauvegarde automatique / Auto-save
 - **Sauvegarde automatique** dans le navigateur (localStorage) à chaque action — survit aux rafraîchissements et crashes
 - Restauration automatique au démarrage
-- Bouton **🗑 Effacer la sauvegarde** (onglet Réglages, maintenir 3 s) pour réinitialiser
+- Sont sauvegardés : robots, obstacles, durée / vitesse de simulation, couleurs (grille, table, fond)
+- Bouton **Effacer la sauvegarde** (onglet Table, maintenir 3 s) pour réinitialiser
 
-### Intégration Git / Git Integration (onglet ⚙️ Réglages)
+### Intégration Git / Git Integration (onglet Table)
 - **Sauvegarder → Git (commit)** : écrit le fichier JSON dans le repo local, commit et push automatiques vers GitHub / GitLab
 - **Ouvrir → Git (pull)** : liste tous les fichiers JSON présents sur le repo distant, sélection visuelle, pull + chargement automatique
 - Authentification : **token** (GitHub `ghp_…` / GitLab `glpat-…`) ou **login / mot de passe**
 - Configuration : URL du dépôt, nom du fichier, branche, identifiants — persistés dans le localStorage
 - Nécessite le serveur local `git-server.js` (voir section Développement)
 
-### Table & Affichage / Table & Display (onglet ⚙️ Réglages)
-- Image de fond par défaut : `public/table_FINALE_1.jpg`
+### Table & Affichage / Table & Display (onglet Table)
+- Image de fond par défaut : `public/Eurobot2027_Rules_FR.webp`
 - Couleur de surface de la table configurable
 - Couleur d'arrière-plan (hors table) configurable
 - Grille configurable (couleur, pas petite / grande grille)
@@ -127,7 +141,7 @@ Pour chaque opération (commit, pull, liste), le serveur :
 
 Cette approche garantit l'isolation totale entre utilisateurs et ne touche jamais au dossier de l'application.
 
-**Configuration** (onglet ⚙️ Réglages dans l'app) :
+**Configuration** (onglet Table dans l'app) :
 
 | Champ | Exemple |
 |---|---|
@@ -151,6 +165,8 @@ Cette approche garantit l'isolation totale entre utilisateurs et ne touche jamai
 | @react-three/drei | Caméra, contrôles, textures |
 | Three.js STLLoader | Import géométrie STL |
 
+Le projet est en JavaScript pur (pas de TypeScript). Voir [CLAUDE.md](CLAUDE.md) pour l'architecture détaillée.
+
 ---
 
 ## Format de sauvegarde JSON
@@ -163,10 +179,14 @@ Cette approche garantit l'isolation totale entre utilisateurs et ne touche jamai
     "id": "r_...", "name": "Robot 1", "color": "#e03131",
     "x": 0.5, "y": 0.3, "heading": 0,
     "speed": 0.3, "accel": 1.0, "rotSpeed": 90, "rotAccel": 360,
-    "waypointMode": "stop", "collisionShape": "circle",
+    "waypointMode": "stop", "collisionShape": "circle", "lookahead": 0.1,
     "width": 0.2, "height": 0.2, "radius": 0.14, "opacity": 1.0,
     "startDelay": 0, "holonomic": false,
-    "waypoints": [{ "x": 1.0, "y": 1.0, "pause": 0, "actionPause": 0 }]
+    "waypoints": [
+      { "id": "w_...", "type": "point", "x": 1.0, "y": 1.0, "pause": 0, "actionPause": 0 },
+      { "id": "w_...", "type": "bezier", "x": 2.0, "y": 1.0, "c1": { "x": 1.3, "y": 1.4 }, "c2": { "x": 1.7, "y": 0.6 }, "pause": 0, "actionPause": 0 },
+      { "id": "w_...", "type": "pass", "x": 2.5, "y": 0.5 }
+    ]
   }],
   "obstacles": []
 }
